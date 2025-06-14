@@ -59,21 +59,23 @@ class OrionSmartContract:
             # Only process logs from this contract
             if log.address.lower() != self.contract_address.lower():
                 continue
-                
+
             # Try to decode the log with each event in the contract
             for event in self.contract.events:
                 try:
                     decoded_log = event.process_log(log)
-                    decoded_logs.append({
-                        'event': decoded_log.event,
-                        'args': dict(decoded_log.args),
-                        'address': decoded_log.address,
-                        'blockHash': decoded_log.blockHash.hex(),
-                        'blockNumber': decoded_log.blockNumber,
-                        'logIndex': decoded_log.logIndex,
-                        'transactionHash': decoded_log.transactionHash.hex(),
-                        'transactionIndex': decoded_log.transactionIndex
-                    })
+                    decoded_logs.append(
+                        {
+                            "event": decoded_log.event,
+                            "args": dict(decoded_log.args),
+                            "address": decoded_log.address,
+                            "blockHash": decoded_log.blockHash.hex(),
+                            "blockNumber": decoded_log.blockNumber,
+                            "logIndex": decoded_log.logIndex,
+                            "transactionHash": decoded_log.transactionHash.hex(),
+                            "transactionIndex": decoded_log.transactionIndex,
+                        }
+                    )
                     break  # Successfully decoded, move to next log
                 except Exception:
                     # This event doesn't match this log, try the next event
@@ -117,6 +119,7 @@ class OrionConfig(OrionSmartContract):
         """Fetch the FHE public CID from the OrionConfig contract."""
         return self.contract.functions.fhePublicCID().call()
 
+
 class OrionVaultFactory(OrionSmartContract):
     """OrionVaultFactory contract."""
 
@@ -126,7 +129,11 @@ class OrionVaultFactory(OrionSmartContract):
             contract_address = os.getenv("FACTORY_ADDRESS")
         super().__init__("OrionVaultFactory", contract_address, rpc_url)
 
-    def create_orion_vault(self, curator_address: str | None = None, deployer_private_key: str | None = None) -> TransactionResult:
+    def create_orion_vault(
+        self,
+        curator_address: str | None = None,
+        deployer_private_key: str | None = None,
+    ) -> TransactionResult:
         """Create an Orion vault for a given curator address."""
         if not curator_address:
             curator_address = os.getenv("CURATOR_ADDRESS")
@@ -139,15 +146,16 @@ class OrionVaultFactory(OrionSmartContract):
         nonce = self.w3.eth.get_transaction_count(account.address)
 
         # Estimate gas needed for the transaction
-        gas_estimate = self.contract.functions.createOrionVault(curator_address).estimate_gas({
-            "from": account.address,
-            "nonce": nonce
-        })
-        
+        gas_estimate = self.contract.functions.createOrionVault(
+            curator_address
+        ).estimate_gas({"from": account.address, "nonce": nonce})
+
         # Add 20% buffer to gas estimate
         gas_limit = int(gas_estimate * 1.2)
 
-        tx = self.contract.functions.createOrionVault(curator_address).build_transaction(
+        tx = self.contract.functions.createOrionVault(
+            curator_address
+        ).build_transaction(
             {
                 "from": account.address,
                 "nonce": nonce,
@@ -169,17 +177,19 @@ class OrionVaultFactory(OrionSmartContract):
         # Decode logs from the transaction receipt
         decoded_logs = self._decode_logs(receipt)
 
-        return TransactionResult(tx_hash=tx_hash_hex, receipt=receipt, decoded_logs=decoded_logs)
+        return TransactionResult(
+            tx_hash=tx_hash_hex, receipt=receipt, decoded_logs=decoded_logs
+        )
 
     def get_vault_address_from_result(self, result: TransactionResult) -> str | None:
         """Extract the vault address from OrionVaultCreated event in the transaction result."""
         if not result.decoded_logs:
             return None
-        
+
         for log in result.decoded_logs:
-            if log.get('event') == 'OrionVaultCreated':
-                return log['args'].get('vault')
-        
+            if log.get("event") == "OrionVaultCreated":
+                return log["args"].get("vault")
+
         return None
 
 
@@ -236,5 +246,7 @@ class OrionTransparentVault(OrionSmartContract):
             raise Exception(f"Transaction failed with status: {receipt['status']}")
 
         decoded_logs = self._decode_logs(receipt)
-        
-        return TransactionResult(tx_hash=tx_hash_hex, receipt=receipt, decoded_logs=decoded_logs)
+
+        return TransactionResult(
+            tx_hash=tx_hash_hex, receipt=receipt, decoded_logs=decoded_logs
+        )
