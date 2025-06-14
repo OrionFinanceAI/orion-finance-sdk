@@ -4,11 +4,13 @@ import pandas as pd
 import typer
 
 from .contracts import OrionConfig, OrionTransparentVault, OrionVaultFactory
-from .fhe import run_keygen
+from .cryptography import encrypt_order_intent, run_keygen
 from .ipfs import download_public_context, upload_to_ipfs
 from .utils import validate_order
 
 app = typer.Typer()
+submit_order_app = typer.Typer()
+app.add_typer(submit_order_app, name="submit-order")
 
 # === Functions associated with protocol Deployer ===
 
@@ -48,14 +50,11 @@ def deploy_orion_vault():
     print(f"Decoded logs: {tx_result.decoded_logs}")
 
 
-# TODO: orion subit-order plain --portfoliopath <path>
-# TODO: orion submit-order encrypted --portfoliopath <path> --fuzz
-# fuzz: bool = typer.Option(False, help="Fuzz the order intent"),
-@app.command()
-def order_intent(
+@submit_order_app.command()
+def plain(
     portfolio_path: str = typer.Option(..., help="Path to the portfolio parquet file"),
 ) -> None:
-    """Submit an order intent."""
+    """Submit a plain order intent."""
     df = pd.read_parquet(portfolio_path)
 
     order_intent = df.iloc[-1]
@@ -74,3 +73,19 @@ def order_intent(
     tx_result = orion_vault.submit_order_intent(order_intent=validated_order_intent)
     print(f"Transaction hash: {tx_result.tx_hash}")
     print(f"Decoded logs: {tx_result.decoded_logs}")
+
+
+@submit_order_app.command()
+def encrypted(
+    portfolio_path: str = typer.Option(..., help="Path to the portfolio parquet file"),
+    fuzz: bool = typer.Option(False, help="Fuzz the order intent"),
+) -> None:
+    """Submit an encrypted order intent."""
+    # Mock to test fuzzer.
+    order_intent_dict = {"0xd81eaae8e6195e67695be9ac447c9d6214cb717a": 1}
+
+    validated_order_intent = validate_order(order_intent=order_intent_dict, fuzz=fuzz)
+
+    encrypted_order_intent = encrypt_order_intent(order_intent=validated_order_intent)
+
+    breakpoint()

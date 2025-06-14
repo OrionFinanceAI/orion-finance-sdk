@@ -28,6 +28,12 @@ orion --help
 # Deploy a new Orion vault
 orion deploy-orion-vault
 
+# Downlaod the public context from IPFS
+orion download
+
 # Submit an order intent
-orion order-intent --portfolio-path ../portfolio-manager/output/optimized/1.parquet
+orion submit-order plain --portfolio-path ../portfolio-manager/output/optimized/1.parquet
+
+# Submit an encrypted order intent
+orion submit-order encrypted --portfolio-path ../portfolio-manager/output/optimized/1.parquet --fuzz
 ```

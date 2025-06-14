@@ -1,4 +1,4 @@
-"""FHE operations for the Orion Python SDK."""
+"""Encryption operations for the Orion Python SDK."""
 
 import tenseal as ts
 
@@ -25,18 +25,25 @@ def run_keygen():
     print("✅ Keys generated and saved.")
 
 
-def client_encrypt():
+def encrypt_order_intent(order_intent: dict[str, int]) -> dict:
     """Encrypt the data on the client."""
     with open("context.public.tenseal", "rb") as f:
         public_context = ts.context_from(f.read())
 
-    plaintext_data = [1.0, 2.0, 3.0]
-    enc_vector = ts.ckks_vector(public_context, plaintext_data)
+    encrypted_dict = {}
+    for key, value in order_intent.items():
+        encrypted_dict[key] = ts.ckks_vector(public_context, [value]).serialize()
 
-    with open("encrypted_data.bin", "wb") as f:
-        f.write(enc_vector.serialize())
+    # Encrypted amounts — amounts are expected to be already encoded as euint32 from TFHE
+    # TODO: before bindings building, assess the compatibility of tenseal/tfhe-rs+py03 and fhevm-solidity.
+    # TODO: int > euint32 > bytes.
+    # py03 + https://github.com/zama-ai/tfhe-rs
+    # items = [{"token": Web3.to_checksum_address(t), "amount": a} for t, a in order_intent.items()]
+    # func = contract.functions.submitOrderIntentEncrypted
 
-    print("🔒 Client encrypted data:", plaintext_data)
+    breakpoint()
+
+    return encrypted_dict
 
 
 def compute_server_evaluation():
