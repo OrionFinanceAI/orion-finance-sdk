@@ -93,15 +93,15 @@ class OrionConfig(OrionSmartContract):
         super().__init__("OrionConfig", contract_address, rpc_url)
 
     @property
-    def whitelisted_vaults(self) -> list[str]:
+    def whitelisted_assets(self) -> list[str]:
         """Fetch all whitelisted vault addresses from the OrionConfig contract."""
-        vault_count = self.contract.functions.whitelistVaultCount().call()
-        vaults = []
-        for i in range(vault_count):
-            vault_address = self.contract.functions.getWhitelistedVaultAt(i).call()
-            vaults.append(vault_address.lower())
+        assets_length = self.contract.functions.whitelistedAssetsLength().call()
+        assets = []
+        for i in range(assets_length):
+            asset_address = self.contract.functions.getWhitelistedAssetAt(i).call()
+            assets.append(asset_address.lower())
 
-        return vaults
+        return assets
 
     def is_whitelisted(self, token_address: str) -> bool:
         """Check if a token address is whitelisted."""
@@ -200,7 +200,7 @@ class OrionTransparentVault(OrionSmartContract):
         """Initialize the OrionTransparentVault contract."""
         if not contract_address:
             contract_address = os.getenv("ORION_VAULT_ADDRESS")
-        super().__init__("OrionVault", contract_address, rpc_url)
+        super().__init__("OrionTransparentVault", contract_address, rpc_url)
         # TODO: write transparent vault contract and encrypted vault contract as separate contracts, update name here.
 
     def submit_order_intent(
@@ -227,11 +227,20 @@ class OrionTransparentVault(OrionSmartContract):
             {"token": Web3.to_checksum_address(token), "amount": amount}
             for token, amount in order_intent.items()
         ]
+
+        # Estimate gas needed for the transaction
+        gas_estimate = self.contract.functions.submitOrderIntentPlain(
+            items
+        ).estimate_gas({"from": account.address, "nonce": nonce})
+
+        # Add 20% buffer to gas estimate
+        gas_limit = int(gas_estimate * 1.2)
+
         tx = self.contract.functions.submitOrderIntentPlain(items).build_transaction(
             {
                 "from": account.address,
                 "nonce": nonce,
-                "gas": 500_000,
+                "gas": gas_limit,
                 "gasPrice": self.w3.eth.gas_price,
             }
         )

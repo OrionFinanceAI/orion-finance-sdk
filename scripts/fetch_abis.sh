@@ -3,7 +3,7 @@ mkdir -p abis/
 contracts=(
     OrionConfig
     OrionVaultFactory
-    OrionVault
+    OrionTransparentVault
 )
 
 # TODO: point to main branch after protocol merge.

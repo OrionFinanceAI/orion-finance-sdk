@@ -35,10 +35,10 @@ def validate_order(order_intent: dict, fuzz: bool = False) -> dict:
     curator_intent_decimals = orion_config.curator_intent_decimals
 
     if fuzz:
-        # Add remaining whitelisted vaults with small random amounts
-        for vault in orion_config.whitelisted_vaults:
-            if vault not in order_intent.keys():
-                order_intent[vault] = (
+        # Add remaining whitelisted assets with small random amounts
+        for asset in orion_config.whitelisted_assets:
+            if asset not in order_intent.keys():
+                order_intent[asset] = (
                     random.randint(1, 10) / 10**curator_intent_decimals
                 )
 
