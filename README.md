@@ -25,6 +25,9 @@ make install
 # List available commands
 orion --help
 
+# Deploy a new Orion vault
+orion deploy-orion-vault
+
 # Submit an order intent
 orion order-intent --portfolio-path ../portfolio-manager/output/optimized/1.parquet
 ```

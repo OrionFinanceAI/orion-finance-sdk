@@ -17,6 +17,7 @@ class TransactionResult:
 
     tx_hash: str
     receipt: TxReceipt
+    decoded_logs: list[dict] = None
 
 
 def load_contract_abi(contract_name: str) -> list[dict]:
@@ -48,8 +49,36 @@ class OrionSmartContract:
     def _wait_for_transaction_receipt(
         self, tx_hash: str, timeout: int = 120
     ) -> TxReceipt:
-        """Wait for a transaction to be mined and return the receipt."""
+        """Wait for a transaction to be processed and return the receipt."""
         return self.w3.eth.wait_for_transaction_receipt(tx_hash, timeout=timeout)
+
+    def _decode_logs(self, receipt: TxReceipt) -> list[dict]:
+        """Decode logs from a transaction receipt."""
+        decoded_logs = []
+        for log in receipt.logs:
+            # Only process logs from this contract
+            if log.address.lower() != self.contract_address.lower():
+                continue
+                
+            # Try to decode the log with each event in the contract
+            for event in self.contract.events:
+                try:
+                    decoded_log = event.process_log(log)
+                    decoded_logs.append({
+                        'event': decoded_log.event,
+                        'args': dict(decoded_log.args),
+                        'address': decoded_log.address,
+                        'blockHash': decoded_log.blockHash.hex(),
+                        'blockNumber': decoded_log.blockNumber,
+                        'logIndex': decoded_log.logIndex,
+                        'transactionHash': decoded_log.transactionHash.hex(),
+                        'transactionIndex': decoded_log.transactionIndex
+                    })
+                    break  # Successfully decoded, move to next log
+                except Exception:
+                    # This event doesn't match this log, try the next event
+                    continue
+        return decoded_logs
 
 
 class OrionConfig(OrionSmartContract):
@@ -87,6 +116,71 @@ class OrionConfig(OrionSmartContract):
     def fhe_public_cid(self) -> str:
         """Fetch the FHE public CID from the OrionConfig contract."""
         return self.contract.functions.fhePublicCID().call()
+
+class OrionVaultFactory(OrionSmartContract):
+    """OrionVaultFactory contract."""
+
+    def __init__(self, contract_address: str | None = None, rpc_url: str | None = None):
+        """Initialize the OrionVaultFactory contract."""
+        if not contract_address:
+            contract_address = os.getenv("FACTORY_ADDRESS")
+        super().__init__("OrionVaultFactory", contract_address, rpc_url)
+
+    def create_orion_vault(self, curator_address: str | None = None, deployer_private_key: str | None = None) -> TransactionResult:
+        """Create an Orion vault for a given curator address."""
+        if not curator_address:
+            curator_address = os.getenv("CURATOR_ADDRESS")
+
+        if not deployer_private_key:
+            # In principle, deployer and curator are different accounts.
+            deployer_private_key = os.getenv("DEPLOYER_PRIVATE_KEY")
+
+        account = self.w3.eth.account.from_key(deployer_private_key)
+        nonce = self.w3.eth.get_transaction_count(account.address)
+
+        # Estimate gas needed for the transaction
+        gas_estimate = self.contract.functions.createOrionVault(curator_address).estimate_gas({
+            "from": account.address,
+            "nonce": nonce
+        })
+        
+        # Add 20% buffer to gas estimate
+        gas_limit = int(gas_estimate * 1.2)
+
+        tx = self.contract.functions.createOrionVault(curator_address).build_transaction(
+            {
+                "from": account.address,
+                "nonce": nonce,
+                "gas": gas_limit,
+                "gasPrice": self.w3.eth.gas_price,
+            }
+        )
+
+        signed = account.sign_transaction(tx)
+        tx_hash = self.w3.eth.send_raw_transaction(signed.raw_transaction)
+        tx_hash_hex = tx_hash.hex()
+
+        receipt = self._wait_for_transaction_receipt(tx_hash_hex)
+
+        # Check if transaction was successful
+        if receipt["status"] != 1:
+            raise Exception(f"Transaction failed with status: {receipt['status']}")
+
+        # Decode logs from the transaction receipt
+        decoded_logs = self._decode_logs(receipt)
+
+        return TransactionResult(tx_hash=tx_hash_hex, receipt=receipt, decoded_logs=decoded_logs)
+
+    def get_vault_address_from_result(self, result: TransactionResult) -> str | None:
+        """Extract the vault address from OrionVaultCreated event in the transaction result."""
+        if not result.decoded_logs:
+            return None
+        
+        for log in result.decoded_logs:
+            if log.get('event') == 'OrionVaultCreated':
+                return log['args'].get('vault')
+        
+        return None
 
 
 class OrionTransparentVault(OrionSmartContract):
@@ -136,11 +230,11 @@ class OrionTransparentVault(OrionSmartContract):
         tx_hash = self.w3.eth.send_raw_transaction(signed.raw_transaction)
         tx_hash_hex = tx_hash.hex()
 
-        # Wait for transaction to be mined
         receipt = self._wait_for_transaction_receipt(tx_hash_hex)
 
-        # Check if transaction was successful
         if receipt["status"] != 1:
             raise Exception(f"Transaction failed with status: {receipt['status']}")
 
-        return TransactionResult(tx_hash=tx_hash_hex, receipt=receipt)
+        decoded_logs = self._decode_logs(receipt)
+        
+        return TransactionResult(tx_hash=tx_hash_hex, receipt=receipt, decoded_logs=decoded_logs)

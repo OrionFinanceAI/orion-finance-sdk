@@ -3,7 +3,7 @@
 import pandas as pd
 import typer
 
-from .chain_interactions import OrionConfig, OrionTransparentVault
+from .contracts import OrionConfig, OrionTransparentVault, OrionVaultFactory
 from .fhe import run_keygen
 from .ipfs import download_public_context, upload_to_ipfs
 from .utils import validate_order
@@ -39,6 +39,15 @@ def download():
     download_public_context(url)
 
 
+@app.command()
+def deploy_orion_vault():
+    """Deploy the OrionTransparentVault contract."""
+    orion_vault_factory = OrionVaultFactory()
+    tx_result = orion_vault_factory.create_orion_vault()
+    print(f"Transaction hash: {tx_result.tx_hash}")
+    print(f"Decoded logs: {tx_result.decoded_logs}")
+
+
 # TODO: orion subit-order plain --portfoliopath <path>
 # TODO: orion submit-order encrypted --portfoliopath <path> --fuzz
 # fuzz: bool = typer.Option(False, help="Fuzz the order intent"),
@@ -64,4 +73,4 @@ def order_intent(
     orion_vault = OrionTransparentVault()
     tx_result = orion_vault.submit_order_intent(order_intent=validated_order_intent)
     print(f"Transaction hash: {tx_result.tx_hash}")
-    print(f"Transaction receipt: {tx_result.receipt}")
+    print(f"Decoded logs: {tx_result.decoded_logs}")

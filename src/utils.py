@@ -5,7 +5,7 @@ import uuid
 
 import numpy as np
 
-from .chain_interactions import OrionConfig
+from .contracts import OrionConfig
 
 random.seed(uuid.uuid4().int)  # uuid-based random seed for irreproducibility.
 
