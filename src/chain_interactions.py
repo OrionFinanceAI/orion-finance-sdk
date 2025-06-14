@@ -2,14 +2,21 @@
 
 import json
 import os
-from typing import Literal
+from dataclasses import dataclass
 
 from dotenv import load_dotenv
 from web3 import Web3
+from web3.types import TxReceipt
 
 load_dotenv()
 
-w3 = Web3(Web3.HTTPProvider(os.getenv("RPC_URL")))
+
+@dataclass
+class TransactionResult:
+    """Result of a transaction including receipt and extracted logs."""
+
+    tx_hash: str
+    receipt: TxReceipt
 
 
 def load_contract_abi(contract_name: str) -> list[dict]:
@@ -21,90 +28,119 @@ def load_contract_abi(contract_name: str) -> list[dict]:
         return json.load(f)["abi"]
 
 
-def get_whitelisted_vaults() -> list[str]:
-    """Fetch all whitelisted vault addresses from the OrionConfig contract."""
-    CONFIG_ADDRESS = Web3.to_checksum_address(os.getenv("CONFIG_ADDRESS"))
-    orion_config = w3.eth.contract(
-        address=CONFIG_ADDRESS, abi=load_contract_abi("OrionConfig")
-    )
-    vault_count = orion_config.functions.whitelistVaultCount().call()
-    vaults = []
-    for i in range(vault_count):
-        vault_address = orion_config.functions.getWhitelistedVaultAt(i).call()
-        vaults.append(vault_address.lower())
+class OrionSmartContract:
+    """Base class for Orion smart contracts."""
 
-    return vaults
+    def __init__(
+        self, contract_name: str, contract_address: str, rpc_url: str | None = None
+    ):
+        """Initialize a smart contract."""
+        if not rpc_url:
+            rpc_url = os.getenv("RPC_URL")
 
+        self.w3 = Web3(Web3.HTTPProvider(rpc_url))
+        self.contract_name = contract_name
+        self.contract_address = contract_address
+        self.contract = self.w3.eth.contract(
+            address=self.contract_address, abi=load_contract_abi(self.contract_name)
+        )
 
-def is_whitelisted(token_address: str) -> bool:
-    """Check if a token address is whitelisted."""
-    CONFIG_ADDRESS = Web3.to_checksum_address(os.getenv("CONFIG_ADDRESS"))
-    orion_config = w3.eth.contract(
-        address=CONFIG_ADDRESS, abi=load_contract_abi("OrionConfig")
-    )
-    return orion_config.functions.isWhitelisted(
-        Web3.to_checksum_address(token_address)
-    ).call()
+    def _wait_for_transaction_receipt(
+        self, tx_hash: str, timeout: int = 120
+    ) -> TxReceipt:
+        """Wait for a transaction to be mined and return the receipt."""
+        return self.w3.eth.wait_for_transaction_receipt(tx_hash, timeout=timeout)
 
 
-def submit_order_intent(
-    order_intent: dict,
-    encoding: Literal[0, 1],  # 0=PLAINTEXT, 1=ENCRYPTED
-) -> None:
-    """Submit a portfolio order intent with PLAINTEXT or ENCRYPTED encoding."""
-    account = w3.eth.account.from_key(os.getenv("CURATOR_PRIVATE_KEY"))
-    nonce = w3.eth.get_transaction_count(account.address)
+class OrionConfig(OrionSmartContract):
+    """OrionConfig contract."""
 
-    items = [
-        {"token": Web3.to_checksum_address(t), "amount": a}
-        for t, a in order_intent.items()
-    ]
+    def __init__(self, contract_address: str | None = None, rpc_url: str | None = None):
+        """Initialize the OrionConfig contract."""
+        if not contract_address:
+            contract_address = os.getenv("CONFIG_ADDRESS")
+        super().__init__("OrionConfig", contract_address, rpc_url)
 
-    ORION_VAULT_ADDRESS = Web3.to_checksum_address(os.getenv("ORION_VAULT_ADDRESS"))
-    contract = w3.eth.contract(
-        address=ORION_VAULT_ADDRESS, abi=load_contract_abi("OrionVault")
-    )
+    @property
+    def whitelisted_vaults(self) -> list[str]:
+        """Fetch all whitelisted vault addresses from the OrionConfig contract."""
+        vault_count = self.contract.functions.whitelistVaultCount().call()
+        vaults = []
+        for i in range(vault_count):
+            vault_address = self.contract.functions.getWhitelistedVaultAt(i).call()
+            vaults.append(vault_address.lower())
 
-    # The dispatching is done in the sdk to enable explicit type definitions in the vault contract.
-    if encoding == 0:
-        func = contract.functions.submitOrderIntentPlain
-    elif encoding == 1:
-        # Encrypted amounts — amounts are expected to be already encoded as euint32 from TFHE
-        breakpoint()
-        # TODO: before bindings building, assess the compatibility of tenseal/tfhe-rs+py03 and fhevm-solidity.
-        # TODO: int > euint32 > bytes.
-        # py03 + https://github.com/zama-ai/tfhe-rs
-        # items = [{"token": Web3.to_checksum_address(t), "amount": a} for t, a in order_intent.items()]
-        func = contract.functions.submitOrderIntentEncrypted
+        return vaults
 
-    tx = func(items).build_transaction(
-        {
-            "from": account.address,
-            "nonce": nonce,
-            "gas": 500_000,
-            "gasPrice": w3.eth.gas_price,
-        }
-    )
+    def is_whitelisted(self, token_address: str) -> bool:
+        """Check if a token address is whitelisted."""
+        return self.contract.functions.isWhitelisted(
+            Web3.to_checksum_address(token_address)
+        ).call()
 
-    signed = account.sign_transaction(tx)
+    @property
+    def curator_intent_decimals(self) -> int:
+        """Fetch the curator intent decimals from the OrionConfig contract."""
+        return self.contract.functions.curatorIntentDecimals().call()
 
-    tx_hash = w3.eth.send_raw_transaction(signed.raw_transaction)
-    print("✅ Order submitted, tx hash:", tx_hash.hex())
+    @property
+    def fhe_public_cid(self) -> str:
+        """Fetch the FHE public CID from the OrionConfig contract."""
+        return self.contract.functions.fhePublicCID().call()
 
 
-def get_curator_intent_decimals() -> int:
-    """Fetch the curator intent decimals from the OrionConfig contract."""
-    CONFIG_ADDRESS = Web3.to_checksum_address(os.getenv("CONFIG_ADDRESS"))
-    orion_config = w3.eth.contract(
-        address=CONFIG_ADDRESS, abi=load_contract_abi("OrionConfig")
-    )
-    return orion_config.functions.curatorIntentDecimals().call()
+class OrionTransparentVault(OrionSmartContract):
+    """OrionTransparentVault contract."""
 
+    def __init__(self, contract_address: str | None = None, rpc_url: str | None = None):
+        """Initialize the OrionTransparentVault contract."""
+        if not contract_address:
+            contract_address = os.getenv("ORION_VAULT_ADDRESS")
+        super().__init__("OrionVault", contract_address, rpc_url)
+        # TODO: write transparent vault contract and encrypted vault contract as separate contracts, update name here.
 
-def get_fhe_public_cid() -> str:
-    """Fetch the FHE public CID from the OrionConfig contract."""
-    CONFIG_ADDRESS = Web3.to_checksum_address(os.getenv("CONFIG_ADDRESS"))
-    orion_config = w3.eth.contract(
-        address=CONFIG_ADDRESS, abi=load_contract_abi("OrionConfig")
-    )
-    return orion_config.functions.fhePublicCID().call()
+    def submit_order_intent(
+        self,
+        order_intent: dict[str, int],
+        curator_private_key: str | None = None,
+    ) -> TransactionResult:
+        """Submit a portfolio order intent.
+
+        Args:
+            order_intent: Dictionary mapping token addresses to amounts
+            curator_private_key: Private key for signing the transaction
+
+        Returns:
+            TransactionResult
+        """
+        if not curator_private_key:
+            curator_private_key = os.getenv("CURATOR_PRIVATE_KEY")
+
+        account = self.w3.eth.account.from_key(curator_private_key)
+        nonce = self.w3.eth.get_transaction_count(account.address)
+
+        items = [
+            {"token": Web3.to_checksum_address(token), "amount": amount}
+            for token, amount in order_intent.items()
+        ]
+        tx = self.contract.functions.submitOrderIntentPlain(items).build_transaction(
+            {
+                "from": account.address,
+                "nonce": nonce,
+                "gas": 500_000,
+                "gasPrice": self.w3.eth.gas_price,
+            }
+        )
+
+        signed = account.sign_transaction(tx)
+        tx_hash = self.w3.eth.send_raw_transaction(signed.raw_transaction)
+        tx_hash_hex = tx_hash.hex()
+
+        # Wait for transaction to be mined
+        receipt = self._wait_for_transaction_receipt(tx_hash_hex)
+
+        # Check if transaction was successful
+        if receipt["status"] != 1:
+            raise Exception(f"Transaction failed with status: {receipt['status']}")
+
+        return TransactionResult(tx_hash=tx_hash_hex, receipt=receipt)

@@ -26,5 +26,5 @@ make install
 orion --help
 
 # Submit an order intent
-orion order-intent --portfolio-path ../portfolio-manager/output/optimized/1.parquet --encoding 0 --fuzz
+orion order-intent --portfolio-path ../portfolio-manager/output/optimized/1.parquet
 ```

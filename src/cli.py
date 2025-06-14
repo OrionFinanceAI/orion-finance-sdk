@@ -3,7 +3,7 @@
 import pandas as pd
 import typer
 
-from .chain_interactions import get_fhe_public_cid, submit_order_intent
+from .chain_interactions import OrionConfig, OrionTransparentVault
 from .fhe import run_keygen
 from .ipfs import download_public_context, upload_to_ipfs
 from .utils import validate_order
@@ -33,17 +33,18 @@ def keygen():
 @app.command()
 def download():
     """Download the public TenSEAL context from a given Lighthouse URL."""
-    fhe_public_cid = get_fhe_public_cid()
+    orion_config = OrionConfig()
+    fhe_public_cid = orion_config.fhe_public_cid
     url = "https://gateway.lighthouse.storage/ipfs/" + fhe_public_cid
     download_public_context(url)
 
 
+# TODO: orion subit-order plain --portfoliopath <path>
+# TODO: orion submit-order encrypted --portfoliopath <path> --fuzz
+# fuzz: bool = typer.Option(False, help="Fuzz the order intent"),
 @app.command()
 def order_intent(
     portfolio_path: str = typer.Option(..., help="Path to the portfolio parquet file"),
-    abis_path: str = typer.Option("abis/", help="Path to the abis directory"),
-    encoding: int = typer.Option(0, help="Encoding type: 0=PLAINTEXT, 1=ENCRYPTED"),
-    fuzz: bool = typer.Option(False, help="Fuzz the order intent"),
 ) -> None:
     """Submit an order intent."""
     df = pd.read_parquet(portfolio_path)
@@ -58,6 +59,9 @@ def order_intent(
     )
 
     order_intent_dict = order_intent.to_dict()
-    validated_order_intent = validate_order(order_intent=order_intent_dict, fuzz=fuzz)
+    validated_order_intent = validate_order(order_intent=order_intent_dict, fuzz=False)
 
-    submit_order_intent(order_intent=validated_order_intent, encoding=encoding)
+    orion_vault = OrionTransparentVault()
+    tx_result = orion_vault.submit_order_intent(order_intent=validated_order_intent)
+    print(f"Transaction hash: {tx_result.tx_hash}")
+    print(f"Transaction receipt: {tx_result.receipt}")
