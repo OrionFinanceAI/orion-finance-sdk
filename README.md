@@ -1,7 +1,7 @@
 # orion-sdk [![Github Actions][gha-badge]][gha]
 
 [gha]: https://github.com/OrionFinanceAI/orion-sdk/actions
-[gha-badge]: https://github.com/OrionFinanceAI/orion-sdk/actions/workflows/ci.yml/badge.svg
+[gha-badge]: https://github.com/OrionFinanceAI/orion-sdk/actions/workflows/build.yml/badge.svg
 
 ## About
 
