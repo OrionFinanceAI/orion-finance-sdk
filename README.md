@@ -32,7 +32,7 @@ make install-dev
 orion --help
 
 # Deploy a new Orion transparent vault
-orion deploy-orion-transparent-vault
+orion deploy-orion-transparent-vault --name "Vault 0" --symbol "V0"
 
 # Downlaod the public context from IPFS
 orion download

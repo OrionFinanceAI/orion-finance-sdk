@@ -3,7 +3,12 @@
 import pandas as pd
 import typer
 
-from .contracts import OrionConfig, OrionTransparentVault, OrionVaultFactory
+from .contracts import (
+    OrionConfig,
+    OrionEncryptedVault,
+    OrionTransparentVault,
+    OrionVaultFactory,
+)
 from .cryptography import encrypt_order_intent, run_keygen
 from .ipfs import download_public_context, upload_to_ipfs
 from .utils import validate_order
@@ -42,10 +47,15 @@ def download():
 
 
 @app.command()
-def deploy_orion_transparent_vault():
+def deploy_orion_transparent_vault(
+    name: str = typer.Option(..., help="Name of the vault"),
+    symbol: str = typer.Option(..., help="Symbol of the vault"),
+):
     """Deploy the OrionTransparentVault contract."""
     orion_vault_factory = OrionVaultFactory()
-    tx_result = orion_vault_factory.create_orion_transparent_vault()
+    tx_result = orion_vault_factory.create_orion_transparent_vault(
+        name=name, symbol=symbol
+    )
     print(f"Transaction hash: {tx_result.tx_hash}")
     print(f"Decoded logs: {tx_result.decoded_logs}")
 
@@ -88,4 +98,6 @@ def encrypted(
 
     encrypted_order_intent = encrypt_order_intent(order_intent=validated_order_intent)
 
-    breakpoint()
+    orion_vault = OrionEncryptedVault()
+
+    raise NotImplementedError

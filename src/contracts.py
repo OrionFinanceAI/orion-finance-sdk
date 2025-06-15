@@ -17,7 +17,7 @@ class TransactionResult:
 
     tx_hash: str
     receipt: TxReceipt
-    decoded_logs: list[dict] = None
+    decoded_logs: list[dict] | None = None
 
 
 def load_contract_abi(contract_name: str) -> list[dict]:
@@ -132,6 +132,8 @@ class OrionVaultFactory(OrionSmartContract):
     def create_orion_transparent_vault(
         self,
         curator_address: str | None = None,
+        name: str | None = None,
+        symbol: str | None = None,
         deployer_private_key: str | None = None,
     ) -> TransactionResult:
         """Create an Orion vault for a given curator address."""
@@ -147,14 +149,14 @@ class OrionVaultFactory(OrionSmartContract):
 
         # Estimate gas needed for the transaction
         gas_estimate = self.contract.functions.createOrionTransparentVault(
-            curator_address
+            curator_address, name, symbol
         ).estimate_gas({"from": account.address, "nonce": nonce})
 
         # Add 20% buffer to gas estimate
         gas_limit = int(gas_estimate * 1.2)
 
         tx = self.contract.functions.createOrionTransparentVault(
-            curator_address
+            curator_address, name, symbol
         ).build_transaction(
             {
                 "from": account.address,
@@ -180,6 +182,16 @@ class OrionVaultFactory(OrionSmartContract):
         return TransactionResult(
             tx_hash=tx_hash_hex, receipt=receipt, decoded_logs=decoded_logs
         )
+
+    def create_orion_encrypted_vault(
+        self,
+        curator_address: str | None = None,
+        name: str | None = None,
+        symbol: str | None = None,
+        deployer_private_key: str | None = None,
+    ) -> TransactionResult:
+        """Create an Orion encrypted vault for a given curator address."""
+        raise NotImplementedError
 
     def get_vault_address_from_result(self, result: TransactionResult) -> str | None:
         """Extract the vault address from OrionVaultCreated event in the transaction result."""
@@ -229,14 +241,14 @@ class OrionTransparentVault(OrionSmartContract):
         ]
 
         # Estimate gas needed for the transaction
-        gas_estimate = self.contract.functions.submitOrderIntentPlain(
-            items
-        ).estimate_gas({"from": account.address, "nonce": nonce})
+        gas_estimate = self.contract.functions.submitOrderIntent(items).estimate_gas(
+            {"from": account.address, "nonce": nonce}
+        )
 
         # Add 20% buffer to gas estimate
         gas_limit = int(gas_estimate * 1.2)
 
-        tx = self.contract.functions.submitOrderIntentPlain(items).build_transaction(
+        tx = self.contract.functions.submitOrderIntent(items).build_transaction(
             {
                 "from": account.address,
                 "nonce": nonce,
@@ -259,3 +271,11 @@ class OrionTransparentVault(OrionSmartContract):
         return TransactionResult(
             tx_hash=tx_hash_hex, receipt=receipt, decoded_logs=decoded_logs
         )
+
+
+class OrionEncryptedVault(OrionSmartContract):
+    """OrionEncryptedVault contract."""
+
+    def __init__(self, contract_address: str | None = None, rpc_url: str | None = None):
+        """Initialize the OrionEncryptedVault contract."""
+        raise NotImplementedError
