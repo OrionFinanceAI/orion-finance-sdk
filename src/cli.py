@@ -42,10 +42,10 @@ def download():
 
 
 @app.command()
-def deploy_orion_vault():
+def deploy_orion_transparent_vault():
     """Deploy the OrionTransparentVault contract."""
     orion_vault_factory = OrionVaultFactory()
-    tx_result = orion_vault_factory.create_orion_vault()
+    tx_result = orion_vault_factory.create_orion_transparent_vault()
     print(f"Transaction hash: {tx_result.tx_hash}")
     print(f"Decoded logs: {tx_result.decoded_logs}")
 

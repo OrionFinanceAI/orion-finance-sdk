@@ -25,8 +25,8 @@ make install
 # List available commands
 orion --help
 
-# Deploy a new Orion vault
-orion deploy-orion-vault
+# Deploy a new Orion transparent vault
+orion deploy-orion-transparent-vault
 
 # Downlaod the public context from IPFS
 orion download

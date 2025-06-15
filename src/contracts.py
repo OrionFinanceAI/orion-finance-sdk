@@ -129,7 +129,7 @@ class OrionVaultFactory(OrionSmartContract):
             contract_address = os.getenv("FACTORY_ADDRESS")
         super().__init__("OrionVaultFactory", contract_address, rpc_url)
 
-    def create_orion_vault(
+    def create_orion_transparent_vault(
         self,
         curator_address: str | None = None,
         deployer_private_key: str | None = None,
@@ -146,14 +146,14 @@ class OrionVaultFactory(OrionSmartContract):
         nonce = self.w3.eth.get_transaction_count(account.address)
 
         # Estimate gas needed for the transaction
-        gas_estimate = self.contract.functions.createOrionVault(
+        gas_estimate = self.contract.functions.createOrionTransparentVault(
             curator_address
         ).estimate_gas({"from": account.address, "nonce": nonce})
 
         # Add 20% buffer to gas estimate
         gas_limit = int(gas_estimate * 1.2)
 
-        tx = self.contract.functions.createOrionVault(
+        tx = self.contract.functions.createOrionTransparentVault(
             curator_address
         ).build_transaction(
             {
