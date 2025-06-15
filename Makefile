@@ -11,7 +11,6 @@ venv:
 
 .PHONY: install
 install:
-	./scripts/fetch_abis.sh
 	uv pip install -e ."[dev]"
 	uv run pre-commit install
 
