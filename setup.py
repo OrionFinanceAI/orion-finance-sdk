@@ -19,7 +19,11 @@ class CustomBuild(build_py):
         """Download the Orion contracts ABIs."""
         abis = ["OrionConfig", "OrionVaultFactory", "OrionTransparentVault"]
         os.makedirs("abis", exist_ok=True)
-        base_url = "https://raw.githubusercontent.com/OrionFinanceAI/protocol/main/artifacts/contracts"
+        
+        is_dev = os.getenv("ORION_DEV", "false").lower() == "true"
+        branch = "dev" if is_dev else "main"
+        base_url = f"https://raw.githubusercontent.com/OrionFinanceAI/protocol/{branch}/artifacts/contracts"
+                
         for contract in abis:
             url = f"{base_url}/{contract}.sol/{contract}.json"
             dest = f"abis/{contract}.json"

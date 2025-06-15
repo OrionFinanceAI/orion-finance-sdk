@@ -19,6 +19,12 @@ source .venv/bin/activate
 make install
 ```
 
+For development installation, use the following command instead:
+
+```bash
+make install-dev
+```
+
 ## Examples of Usage
 
 ```bash

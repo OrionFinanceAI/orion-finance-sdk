@@ -8,10 +8,13 @@ venv:
 	rm -rf abis/
 	uv venv
 
-
 .PHONY: install
 install:
-	uv pip install -e ."[dev]"
+	uv pip install -e .
+
+.PHONY: install-dev
+install-dev:
+	ORION_DEV=true uv pip install -e ."[dev]"
 	uv run pre-commit install
 
 .PHONY: codestyle
