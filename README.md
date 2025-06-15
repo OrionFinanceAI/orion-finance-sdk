@@ -19,12 +19,27 @@ source .venv/bin/activate
 make install
 ```
 
+For development installation, use the following command instead:
+
+```bash
+make install-dev
+```
+
 ## Examples of Usage
 
 ```bash
 # List available commands
 orion --help
 
+# Deploy a new Orion transparent vault
+orion deploy-orion-transparent-vault --name "Vault 0" --symbol "V0"
+
+# Downlaod the public context from IPFS
+orion download
+
 # Submit an order intent
-orion order-intent --portfolio-path ../portfolio-manager/output/optimized/1.parquet --encoding 0 --fuzz
+orion submit-order plain --portfolio-path ../portfolio-manager/output/optimized/1.parquet
+
+# Submit an encrypted order intent
+orion submit-order encrypted --portfolio-path ../portfolio-manager/output/optimized/1.parquet --fuzz
 ```

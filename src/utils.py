@@ -5,11 +5,7 @@ import uuid
 
 import numpy as np
 
-from .chain_interactions import (
-    get_curator_intent_decimals,
-    get_whitelisted_vaults,
-    is_whitelisted,
-)
+from .contracts import OrionConfig
 
 random.seed(uuid.uuid4().int)  # uuid-based random seed for irreproducibility.
 
@@ -18,9 +14,11 @@ random.seed(uuid.uuid4().int)  # uuid-based random seed for irreproducibility.
 
 def validate_order(order_intent: dict, fuzz: bool = False) -> dict:
     """Validate an order intent."""
+    orion_config = OrionConfig()
+
     # Validate all tokens are whitelisted
     for token_address in order_intent.keys():
-        if not is_whitelisted(token_address):
+        if not orion_config.is_whitelisted(token_address):
             raise ValueError(f"Token {token_address} is not whitelisted")
 
     # Validate all amounts are positive
@@ -34,14 +32,13 @@ def validate_order(order_intent: dict, fuzz: bool = False) -> dict:
             "The sum of amounts is not 1 (within floating point tolerance)."
         )
 
-    curator_intent_decimals = get_curator_intent_decimals()
+    curator_intent_decimals = orion_config.curator_intent_decimals
 
     if fuzz:
-        whitelisted_vaults = get_whitelisted_vaults()
-        # Add remaining whitelisted vaults with small random amounts
-        for vault in whitelisted_vaults:
-            if vault not in order_intent.keys():
-                order_intent[vault] = (
+        # Add remaining whitelisted assets with small random amounts
+        for asset in orion_config.whitelisted_assets:
+            if asset not in order_intent.keys():
+                order_intent[asset] = (
                     random.randint(1, 10) / 10**curator_intent_decimals
                 )
 
