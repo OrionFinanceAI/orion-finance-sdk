@@ -213,7 +213,6 @@ class OrionTransparentVault(OrionSmartContract):
         if not contract_address:
             contract_address = os.getenv("ORION_VAULT_ADDRESS")
         super().__init__("OrionTransparentVault", contract_address, rpc_url)
-        # TODO: write transparent vault contract and encrypted vault contract as separate contracts, update name here.
 
     def submit_order_intent(
         self,
