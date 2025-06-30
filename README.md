@@ -32,14 +32,11 @@ make install-dev
 orion --help
 
 # Deploy a new Orion transparent vault
-source .env && orion deploy-orion-transparent-vault --name "Vault 0" --symbol "V0"
-
-# Downlaod the public context from IPFS
-orion download
+orion deploy-orion-transparent-vault --name "Vault 0" --symbol "V0"
 
 # Submit an order intent
-source .env && orion submit-order plain --portfolio-path ../portfolio-manager/output/optimized/1.parquet
+orion submit-order plain --portfolio-path ../portfolio-manager/output/optimized/1.parquet
 
 # Submit an encrypted order intent
-orion submit-order encrypted --portfolio-path ../portfolio-manager/output/optimized/1.parquet --fuzz
+orion submit-order encrypted --portfolio-path ../portfolio-manager/output/optimized/1.parquet
 ```
