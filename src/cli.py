@@ -1,6 +1,7 @@
 """Command line interface for the Orion Python SDK."""
 
-import pandas as pd
+import json
+
 import typer
 
 from .contracts import (
@@ -62,21 +63,15 @@ def deploy_orion_transparent_vault(
 
 @submit_order_app.command()
 def plain(
-    portfolio_path: str = typer.Option(..., help="Path to the portfolio parquet file"),
+    order_intent_path: str = typer.Option(
+        ..., help="Path to JSON file containing order intent"
+    ),
 ) -> None:
     """Submit a plain order intent."""
-    df = pd.read_parquet(portfolio_path)
+    # JSON file input
+    with open(order_intent_path, "r") as f:
+        order_intent_dict = json.load(f)
 
-    order_intent = df.iloc[-1]
-    order_intent = order_intent[order_intent != 0]
-
-    # TODO: specific of current curator portfolio management pipeline.
-    # Sdk shall be agnostic of the portfolio management pipeline.
-    order_intent.index = order_intent.index.str.lower().str.replace(
-        "_1", "", regex=False
-    )
-
-    order_intent_dict = order_intent.to_dict()
     validated_order_intent = validate_order(order_intent=order_intent_dict, fuzz=False)
 
     orion_vault = OrionTransparentVault()

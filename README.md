@@ -32,11 +32,13 @@ make install-dev
 orion --help
 
 # Deploy a new Orion transparent vault
-orion deploy-orion-transparent-vault --name "Vault 0" --symbol "V0"
-
-# Submit an order intent
-orion submit-order plain --portfolio-path ../portfolio-manager/output/optimized/1.parquet
-
-# Submit an encrypted order intent
-orion submit-order encrypted --portfolio-path ../portfolio-manager/output/optimized/1.parquet
+source .env && orion deploy-orion-transparent-vault --name "Vault 0" --symbol "V0"
+# Use off-chain stack to generate an order intent
+echo '{"0x0692d38F0da545D08d5101aC09AA4139D121F127": 0.42, "0x3d99435E5531b47267739755D7c91332a0304905": 0.58}' > order_intent.json
+# Submit the order intent to the Orion vault
+source .env && orion submit-order plain --order-intent-path order_intent.json
 ```
+
+## Order Intent Input Format
+
+The SDK supports providing order intents as a JSON file.
