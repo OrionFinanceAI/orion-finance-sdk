@@ -30,7 +30,6 @@ source .venv/bin/activate
 uv pip install -e .
 ```
 
-
 or, with make:
 
 ```bash
@@ -42,12 +41,28 @@ make install
 
 ## Examples of Usage
 
-```bash
-# List available commands
-orion --help
+### List available commands
 
-# Deploy a new Orion transparent vault
-orion deploy-orion-transparent-vault --name "Vault 0" --symbol "V0"
+```bash
+orion --help
+orion deploy-vault --help
+orion submit-order --help
+```
+
+### Deploy a new Transparent Orion vault
+
+```bash
+orion deploy-vault --vault-type transparent --name "Algorithmic Liquidity Provision & Hedging Agent" --symbol "ALPHA" --fee-type hard_hurdle --performance-fee 100 --management-fee 10
+```
+
+### Deploy a new Encrypted Orion vault
+
+```bash
+orion deploy-vault --vault-type encrypted --name "Quantitative Uncertainty Analysis of Network Topologies" --symbol "QUANT" --fee-type high_water_mark --performance-fee 0 --management-fee 20
+```
+
+
+
 # Use off-chain stack to generate an order intent
 echo '{"0x0692d38F0da545D08d5101aC09AA4139D121F127": 0.42, "0x3d99435E5531b47267739755D7c91332a0304905": 0.58}' > order_intent.json
 # Submit the order intent to the Orion vault

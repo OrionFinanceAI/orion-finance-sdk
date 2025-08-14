@@ -52,6 +52,10 @@ class OrionSmartContract:
         """Wait for a transaction to be processed and return the receipt."""
         return self.w3.eth.wait_for_transaction_receipt(tx_hash, timeout=timeout)
 
+    # TODO: verify contracts once deployed, potentially in the same cli command, as soon as deployed it,
+    # verify with the same input parameters.
+    # Skip verification if Etherscan API key is not provided without failing command.
+
     def _decode_logs(self, receipt: TxReceipt) -> list[dict]:
         """Decode logs from a transaction receipt."""
         decoded_logs = []
@@ -115,21 +119,24 @@ class OrionConfig(OrionSmartContract):
         return self.contract.functions.curatorIntentDecimals().call()
 
 
-class OrionVaultFactory(OrionSmartContract):
-    """OrionVaultFactory contract."""
+class TransparentVaultFactory(OrionSmartContract):
+    """TransparentVaultFactory contract."""
 
     def __init__(self, contract_address: str | None = None, rpc_url: str | None = None):
-        """Initialize the OrionVaultFactory contract."""
+        """Initialize the TransparentVaultFactory contract."""
         if not contract_address:
-            contract_address = os.getenv("FACTORY_ADDRESS")
-        super().__init__("OrionVaultFactory", contract_address, rpc_url)
+            contract_address = os.getenv("TRANSPARENT_VAULT_FACTORY_ADDRESS")
+        super().__init__("TransparentVaultFactory", contract_address, rpc_url)
 
-    def create_orion_transparent_vault(
+    def create_orion_vault(
         self,
+        deployer_private_key: str | None = None,
         curator_address: str | None = None,
         name: str | None = None,
         symbol: str | None = None,
-        deployer_private_key: str | None = None,
+        fee_type: int | None = None,
+        performance_fee: int | None = None,
+        management_fee: int | None = None,
     ) -> TransactionResult:
         """Create an Orion vault for a given curator address."""
         if not curator_address:
@@ -137,21 +144,23 @@ class OrionVaultFactory(OrionSmartContract):
 
         if not deployer_private_key:
             # In principle, deployer and curator are different accounts.
-            deployer_private_key = os.getenv("DEPLOYER_PRIVATE_KEY")
+            deployer_private_key = os.getenv("VAULT_DEPLOYER_PRIVATE_KEY")
 
         account = self.w3.eth.account.from_key(deployer_private_key)
         nonce = self.w3.eth.get_transaction_count(account.address)
 
         # Estimate gas needed for the transaction
-        gas_estimate = self.contract.functions.createOrionTransparentVault(
-            curator_address, name, symbol
+        gas_estimate = self.contract.functions.createVault(
+            curator_address, name, symbol, fee_type, performance_fee, management_fee
         ).estimate_gas({"from": account.address, "nonce": nonce})
 
         # Add 20% buffer to gas estimate
         gas_limit = int(gas_estimate * 1.2)
 
-        tx = self.contract.functions.createOrionTransparentVault(
-            curator_address, name, symbol
+        # TODO: add check to measure deployer ETH balance and raise error if not enough before building tx.
+
+        tx = self.contract.functions.createVault(
+            curator_address, name, symbol, fee_type, performance_fee, management_fee
         ).build_transaction(
             {
                 "from": account.address,
@@ -178,16 +187,6 @@ class OrionVaultFactory(OrionSmartContract):
             tx_hash=tx_hash_hex, receipt=receipt, decoded_logs=decoded_logs
         )
 
-    def create_orion_encrypted_vault(
-        self,
-        curator_address: str | None = None,
-        name: str | None = None,
-        symbol: str | None = None,
-        deployer_private_key: str | None = None,
-    ) -> TransactionResult:
-        """Create an Orion encrypted vault for a given curator address."""
-        raise NotImplementedError
-
     def get_vault_address_from_result(self, result: TransactionResult) -> str | None:
         """Extract the vault address from OrionVaultCreated event in the transaction result."""
         if not result.decoded_logs:
@@ -198,6 +197,26 @@ class OrionVaultFactory(OrionSmartContract):
                 return log["args"].get("vault")
 
         return None
+
+
+class EncryptedVaultFactory(OrionSmartContract):
+    """EncryptedVaultFactory contract."""
+
+    def __init__(self, contract_address: str | None = None, rpc_url: str | None = None):
+        """Initialize the EncryptedVaultFactory contract."""
+        if not contract_address:
+            contract_address = os.getenv("ENCRYPTED_VAULT_FACTORY_ADDRESS")
+        super().__init__("EncryptedVaultFactory", contract_address, rpc_url)
+
+    def create_orion_vault(
+        self,
+        deployer_private_key: str | None = None,
+        curator_address: str | None = None,
+        name: str | None = None,
+        symbol: str | None = None,
+    ) -> TransactionResult:
+        """Create an Orion encrypted vault for a given curator address."""
+        raise NotImplementedError
 
 
 class OrionTransparentVault(OrionSmartContract):
@@ -252,6 +271,7 @@ class OrionTransparentVault(OrionSmartContract):
         )
 
         signed = account.sign_transaction(tx)
+        # TODO: use tenacity to retry transaction if it fails with TimeExhausted is not in the chain after 120 seconds. True for all "send_raw_transaction" calls.
         tx_hash = self.w3.eth.send_raw_transaction(signed.raw_transaction)
         tx_hash_hex = tx_hash.hex()
 
