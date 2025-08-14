@@ -147,3 +147,4 @@ catboost_info/
 .ruff_cache/
 *tenseal
 abis/
+*.json

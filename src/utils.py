@@ -5,15 +5,41 @@ import uuid
 
 import numpy as np
 
-from .contracts import OrionConfig
-
 random.seed(uuid.uuid4().int)  # uuid-based random seed for irreproducibility.
 
 # TODO: coprocessor, for encoded intents: to check FHE encrypted intents associated with protocol public FHE context.
 
+# Validation constants matching smart contract requirements
+MAX_PERFORMANCE_FEE = 5000  # 50% in basis points
+MAX_MANAGEMENT_FEE = 500  # 5% in basis points
+
+
+def validate_address(address: str) -> None:
+    """Validate that the address is not zero."""
+    if not address or address == "0x0000000000000000000000000000000000000000":
+        raise ValueError("Address cannot be zero")
+
+
+def validate_performance_fee(performance_fee: int) -> None:
+    """Validate that the performance fee is within acceptable bounds."""
+    if performance_fee > MAX_PERFORMANCE_FEE:
+        raise ValueError(
+            f"Performance fee {performance_fee} basis points exceeds maximum allowed value of {MAX_PERFORMANCE_FEE}"
+        )
+
+
+def validate_management_fee(management_fee: int) -> None:
+    """Validate that the management fee is within acceptable bounds."""
+    if management_fee > MAX_MANAGEMENT_FEE:
+        raise ValueError(
+            f"Management fee {management_fee} basis points exceeds maximum allowed value of {MAX_MANAGEMENT_FEE}"
+        )
+
 
 def validate_order(order_intent: dict, fuzz: bool = False) -> dict:
     """Validate an order intent."""
+    from .contracts import OrionConfig
+
     orion_config = OrionConfig()
 
     # Validate all tokens are whitelisted
@@ -81,3 +107,39 @@ def round_with_fixed_sum(
     result[indices[:remainder]] += 1
 
     return result.tolist()
+
+
+def format_transaction_logs(
+    tx_result, success_message: str = "Transaction completed successfully!"
+):
+    """Format transaction logs in a human-readable way.
+
+    Args:
+        tx_result: Transaction result object with tx_hash and decoded_logs attributes
+        success_message: Custom success message to display at the end
+    """
+    print(f"✅ Transaction hash: {tx_result.tx_hash}")
+    print("=" * 60)
+
+    if tx_result.decoded_logs:
+        print("📋 Transaction Events:")
+        for i, log in enumerate(tx_result.decoded_logs, 1):
+            print(f"\n{i}. Event: {log.get('event', 'Unknown')}")
+
+            if log.get("args"):
+                args = log["args"]
+                print("   Arguments:")
+                for key, value in args.items():
+                    if key == "vaultType":
+                        vault_type_name = "Transparent" if value == 0 else "Encrypted"
+                        print(f"     {key}: {value} ({vault_type_name})")
+                    else:
+                        print(f"     {key}: {value}")
+
+            print(f"   Contract: {log.get('address', 'Unknown')}")
+            print(f"   Block: {log.get('blockNumber', 'Unknown')}")
+    else:
+        print("⚠️  No events found in transaction logs")
+
+    print("=" * 60)
+    print(f"🎉 {success_message}")

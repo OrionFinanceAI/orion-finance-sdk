@@ -1,88 +1,82 @@
 """Command line interface for the Orion Python SDK."""
 
-import pandas as pd
+import json
+
 import typer
 
 from .contracts import (
-    OrionConfig,
     OrionEncryptedVault,
     OrionTransparentVault,
-    OrionVaultFactory,
+    VaultFactory,
 )
-from .cryptography import encrypt_order_intent, run_keygen
-from .ipfs import download_public_context, upload_to_ipfs
-from .utils import validate_order
+from .cryptography import encrypt_order_intent
+from .types import (
+    FeeType,
+    VaultType,
+    fee_type_to_int,
+)
+from .utils import format_transaction_logs, validate_order
 
 app = typer.Typer()
 submit_order_app = typer.Typer()
 app.add_typer(submit_order_app, name="submit-order")
 
-# === Functions associated with protocol Deployer ===
-
 
 @app.command()
-def upload(path: str):
-    """Upload a file to IPFS."""
-    url, cid = upload_to_ipfs(path)
-    print(f"Uploaded to IPFS: {url}")
-    print(f"CID: {cid}")
-
-
-@app.command()
-def keygen():
-    """Generate FHE keys."""
-    run_keygen()
-
-
-# === Functions associated with Curator ===
-
-
-@app.command()
-def download():
-    """Download the public TenSEAL context from a given Lighthouse URL."""
-    orion_config = OrionConfig()
-    fhe_public_cid = orion_config.fhe_public_cid
-    url = "https://gateway.lighthouse.storage/ipfs/" + fhe_public_cid
-    download_public_context(url)
-
-
-@app.command()
-def deploy_orion_transparent_vault(
+def deploy_vault(
+    vault_type: VaultType = typer.Option(
+        ..., help="Type of the vault (encrypted or transparent)"
+    ),
     name: str = typer.Option(..., help="Name of the vault"),
     symbol: str = typer.Option(..., help="Symbol of the vault"),
+    fee_type: FeeType = typer.Option(..., help="Type of the fee"),
+    performance_fee: int = typer.Option(..., help="Performance fee in basis points"),
+    management_fee: int = typer.Option(..., help="Management fee in basis points"),
 ):
-    """Deploy the OrionTransparentVault contract."""
-    orion_vault_factory = OrionVaultFactory()
-    tx_result = orion_vault_factory.create_orion_transparent_vault(
-        name=name, symbol=symbol
+    """Deploy an Orion vault."""
+    fee_type = fee_type_to_int[fee_type.value]
+
+    vault_factory = VaultFactory(vault_type=vault_type.value)
+
+    tx_result = vault_factory.create_orion_vault(
+        name=name,
+        symbol=symbol,
+        fee_type=fee_type,
+        performance_fee=performance_fee,
+        management_fee=management_fee,
     )
-    print(f"Transaction hash: {tx_result.tx_hash}")
-    print(f"Decoded logs: {tx_result.decoded_logs}")
+
+    # Format transaction logs
+    format_transaction_logs(tx_result, "Vault deployment transaction completed!")
+
+    # Extract vault address if available
+    vault_address = vault_factory.get_vault_address_from_result(tx_result)
+    if vault_address:
+        print(
+            f"\n📍 Vault address: {vault_address} <------------------- ADD THIS TO YOUR .env FILE TO INTERACT WITH THE VAULT."
+        )
+    else:
+        print("\n❌ Could not extract vault address from transaction")
 
 
 @submit_order_app.command()
 def plain(
-    portfolio_path: str = typer.Option(..., help="Path to the portfolio parquet file"),
+    order_intent_path: str = typer.Option(
+        ..., help="Path to JSON file containing order intent"
+    ),
 ) -> None:
     """Submit a plain order intent."""
-    df = pd.read_parquet(portfolio_path)
+    # JSON file input
+    with open(order_intent_path, "r") as f:
+        order_intent = json.load(f)
 
-    order_intent = df.iloc[-1]
-    order_intent = order_intent[order_intent != 0]
-
-    # TODO: specific of current curator portfolio management pipeline.
-    # Sdk shall be agnostic of the portfolio management pipeline.
-    order_intent.index = order_intent.index.str.lower().str.replace(
-        "_1", "", regex=False
-    )
-
-    order_intent_dict = order_intent.to_dict()
-    validated_order_intent = validate_order(order_intent=order_intent_dict, fuzz=False)
+    validated_order_intent = validate_order(order_intent=order_intent, fuzz=False)
 
     orion_vault = OrionTransparentVault()
     tx_result = orion_vault.submit_order_intent(order_intent=validated_order_intent)
-    print(f"Transaction hash: {tx_result.tx_hash}")
-    print(f"Decoded logs: {tx_result.decoded_logs}")
+
+    # Format transaction logs
+    format_transaction_logs(tx_result, "Order intent submitted successfully!")
 
 
 @submit_order_app.command()

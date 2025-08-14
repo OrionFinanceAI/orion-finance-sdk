@@ -17,9 +17,18 @@ class CustomBuild(build_py):
 
     def download_abis(self):
         """Download the Orion contracts ABIs."""
+        subfolders_abis = [
+            "",
+            "factories",
+            "factories",
+            "vaults",
+            "vaults",
+        ]
+
         abis = [
             "OrionConfig",
-            "OrionVaultFactory",
+            "TransparentVaultFactory",
+            "EncryptedVaultFactory",
             "OrionTransparentVault",
             "OrionEncryptedVault",
         ]
@@ -29,8 +38,8 @@ class CustomBuild(build_py):
         branch = "dev" if is_dev else "main"
         base_url = f"https://raw.githubusercontent.com/OrionFinanceAI/protocol/{branch}/artifacts/contracts"
 
-        for contract in abis:
-            url = f"{base_url}/{contract}.sol/{contract}.json"
+        for i, contract in enumerate(abis):
+            url = f"{base_url}/{subfolders_abis[i]}/{contract}.sol/{contract}.json"
             dest = f"abis/{contract}.json"
             print(f"Downloading {contract} ABI...")
             urllib.request.urlretrieve(url, dest)
