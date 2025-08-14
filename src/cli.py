@@ -10,7 +10,11 @@ from .contracts import (
     VaultFactory,
 )
 from .cryptography import encrypt_order_intent
-from .types import FeeType, VaultType, fee_type_to_int
+from .types import (
+    FeeType,
+    VaultType,
+    fee_type_to_int,
+)
 from .utils import validate_order
 
 app = typer.Typer()

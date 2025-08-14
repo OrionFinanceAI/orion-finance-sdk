@@ -61,14 +61,15 @@ orion deploy-vault --vault-type transparent --name "Algorithmic Liquidity Provis
 orion deploy-vault --vault-type encrypted --name "Quantitative Uncertainty Analysis of Network Topologies" --symbol "QUANT" --fee-type high_water_mark --performance-fee 0 --management-fee 20
 ```
 
+### Submit an order intent to a vault
 
-
+```bash
 # Use off-chain stack to generate an order intent
 echo '{"0x0692d38F0da545D08d5101aC09AA4139D121F127": 0.42, "0x3d99435E5531b47267739755D7c91332a0304905": 0.58}' > order_intent.json
+
 # Submit the order intent to the Orion vault
 orion submit-order plain --order-intent-path order_intent.json
+
+# Submit the order intent to the Orion vault
+orion submit-order encrypted --portfolio-path portfolio.parquet
 ```
-
-## Order Intent Input Format
-
-The SDK supports providing order intents as a JSON file.

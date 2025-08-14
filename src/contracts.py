@@ -4,9 +4,12 @@ import json
 import os
 from dataclasses import dataclass
 
+import typer
 from dotenv import load_dotenv
 from web3 import Web3
 from web3.types import TxReceipt
+
+from .utils import validate_address, validate_management_fee, validate_performance_fee
 
 load_dotenv()
 
@@ -118,6 +121,10 @@ class OrionConfig(OrionSmartContract):
         """Fetch the curator intent decimals from the OrionConfig contract."""
         return self.contract.functions.curatorIntentDecimals().call()
 
+    def is_system_idle(self) -> bool:
+        """Check if the system is in idle state, required for vault deployment."""
+        return self.contract.functions.isSystemIdle().call()
+
 
 class VaultFactory(OrionSmartContract):
     """VaultFactory contract."""
@@ -146,12 +153,28 @@ class VaultFactory(OrionSmartContract):
         management_fee: int | None = None,
     ) -> TransactionResult:
         """Create an Orion vault for a given curator address."""
+        config = OrionConfig()
+
         if not curator_address:
             curator_address = os.getenv("CURATOR_ADDRESS")
+        validate_address(curator_address)
 
         if not deployer_private_key:
             # In principle, deployer and curator are different accounts.
             deployer_private_key = os.getenv("VAULT_DEPLOYER_PRIVATE_KEY")
+        try:
+            account = config.w3.eth.account.from_key(deployer_private_key)
+            validate_address(account.address)
+        except Exception as e:
+            raise typer.BadParameter(f"Invalid VAULT_DEPLOYER_PRIVATE_KEY: {e}")
+
+        validate_performance_fee(performance_fee)
+        validate_management_fee(management_fee)
+
+        if not config.is_system_idle():
+            raise typer.BadParameter(
+                "System is not idle. Cannot deploy vault at this time."
+            )
 
         account = self.w3.eth.account.from_key(deployer_private_key)
         nonce = self.w3.eth.get_transaction_count(account.address)

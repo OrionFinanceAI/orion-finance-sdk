@@ -5,15 +5,41 @@ import uuid
 
 import numpy as np
 
-from .contracts import OrionConfig
-
 random.seed(uuid.uuid4().int)  # uuid-based random seed for irreproducibility.
 
 # TODO: coprocessor, for encoded intents: to check FHE encrypted intents associated with protocol public FHE context.
 
+# Validation constants matching smart contract requirements
+MAX_PERFORMANCE_FEE = 5000  # 50% in basis points
+MAX_MANAGEMENT_FEE = 500  # 5% in basis points
+
+
+def validate_address(address: str) -> None:
+    """Validate that the address is not zero."""
+    if not address or address == "0x0000000000000000000000000000000000000000":
+        raise ValueError("Address cannot be zero")
+
+
+def validate_performance_fee(performance_fee: int) -> None:
+    """Validate that the performance fee is within acceptable bounds."""
+    if performance_fee > MAX_PERFORMANCE_FEE:
+        raise ValueError(
+            f"Performance fee {performance_fee} basis points exceeds maximum allowed value of {MAX_PERFORMANCE_FEE}"
+        )
+
+
+def validate_management_fee(management_fee: int) -> None:
+    """Validate that the management fee is within acceptable bounds."""
+    if management_fee > MAX_MANAGEMENT_FEE:
+        raise ValueError(
+            f"Management fee {management_fee} basis points exceeds maximum allowed value of {MAX_MANAGEMENT_FEE}"
+        )
+
 
 def validate_order(order_intent: dict, fuzz: bool = False) -> dict:
     """Validate an order intent."""
+    from .contracts import OrionConfig
+
     orion_config = OrionConfig()
 
     # Validate all tokens are whitelisted
