@@ -114,11 +114,6 @@ class OrionConfig(OrionSmartContract):
         """Fetch the curator intent decimals from the OrionConfig contract."""
         return self.contract.functions.curatorIntentDecimals().call()
 
-    @property
-    def fhe_public_cid(self) -> str:
-        """Fetch the FHE public CID from the OrionConfig contract."""
-        return self.contract.functions.fhePublicCID().call()
-
 
 class OrionVaultFactory(OrionSmartContract):
     """OrionVaultFactory contract."""

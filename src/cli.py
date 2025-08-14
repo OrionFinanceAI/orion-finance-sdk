@@ -5,46 +5,16 @@ import json
 import typer
 
 from .contracts import (
-    OrionConfig,
     OrionEncryptedVault,
     OrionTransparentVault,
     OrionVaultFactory,
 )
-from .cryptography import encrypt_order_intent, run_keygen
-from .ipfs import download_public_context, upload_to_ipfs
+from .cryptography import encrypt_order_intent
 from .utils import validate_order
 
 app = typer.Typer()
 submit_order_app = typer.Typer()
 app.add_typer(submit_order_app, name="submit-order")
-
-# === Functions associated with protocol Deployer ===
-
-
-@app.command()
-def upload(path: str):
-    """Upload a file to IPFS."""
-    url, cid = upload_to_ipfs(path)
-    print(f"Uploaded to IPFS: {url}")
-    print(f"CID: {cid}")
-
-
-@app.command()
-def keygen():
-    """Generate FHE keys."""
-    run_keygen()
-
-
-# === Functions associated with Curator ===
-
-
-@app.command()
-def download():
-    """Download the public TenSEAL context from a given Lighthouse URL."""
-    orion_config = OrionConfig()
-    fhe_public_cid = orion_config.fhe_public_cid
-    url = "https://gateway.lighthouse.storage/ipfs/" + fhe_public_cid
-    download_public_context(url)
 
 
 @app.command()
