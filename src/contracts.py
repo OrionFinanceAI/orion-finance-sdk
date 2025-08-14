@@ -119,14 +119,21 @@ class OrionConfig(OrionSmartContract):
         return self.contract.functions.curatorIntentDecimals().call()
 
 
-class TransparentVaultFactory(OrionSmartContract):
-    """TransparentVaultFactory contract."""
+class VaultFactory(OrionSmartContract):
+    """VaultFactory contract."""
 
-    def __init__(self, contract_address: str | None = None, rpc_url: str | None = None):
-        """Initialize the TransparentVaultFactory contract."""
+    def __init__(
+        self,
+        vault_type: str,
+        contract_address: str | None = None,
+        rpc_url: str | None = None,
+    ):
+        """Initialize the VaultFactory contract."""
         if not contract_address:
-            contract_address = os.getenv("TRANSPARENT_VAULT_FACTORY_ADDRESS")
-        super().__init__("TransparentVaultFactory", contract_address, rpc_url)
+            contract_address = os.getenv(f"{vault_type.upper()}_VAULT_FACTORY_ADDRESS")
+        super().__init__(
+            f"{vault_type.capitalize()}VaultFactory", contract_address, rpc_url
+        )
 
     def create_orion_vault(
         self,
@@ -197,26 +204,6 @@ class TransparentVaultFactory(OrionSmartContract):
                 return log["args"].get("vault")
 
         return None
-
-
-class EncryptedVaultFactory(OrionSmartContract):
-    """EncryptedVaultFactory contract."""
-
-    def __init__(self, contract_address: str | None = None, rpc_url: str | None = None):
-        """Initialize the EncryptedVaultFactory contract."""
-        if not contract_address:
-            contract_address = os.getenv("ENCRYPTED_VAULT_FACTORY_ADDRESS")
-        super().__init__("EncryptedVaultFactory", contract_address, rpc_url)
-
-    def create_orion_vault(
-        self,
-        deployer_private_key: str | None = None,
-        curator_address: str | None = None,
-        name: str | None = None,
-        symbol: str | None = None,
-    ) -> TransactionResult:
-        """Create an Orion encrypted vault for a given curator address."""
-        raise NotImplementedError
 
 
 class OrionTransparentVault(OrionSmartContract):

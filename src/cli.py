@@ -5,10 +5,9 @@ import json
 import typer
 
 from .contracts import (
-    EncryptedVaultFactory,
     # OrionEncryptedVault,
     # OrionTransparentVault,
-    TransparentVaultFactory,
+    VaultFactory,
 )
 from .cryptography import encrypt_order_intent
 from .types import FeeType, VaultType, fee_type_to_int
@@ -33,11 +32,7 @@ def deploy_vault(
     """Deploy an Orion vault."""
     fee_type = fee_type_to_int[fee_type.value]
 
-    match vault_type:
-        case VaultType.TRANSPARENT:
-            vault_factory = TransparentVaultFactory()
-        case VaultType.ENCRYPTED:
-            vault_factory = EncryptedVaultFactory()
+    vault_factory = VaultFactory(vault_type=vault_type.value)
 
     tx_result = vault_factory.create_orion_vault(
         name=name,
