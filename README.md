@@ -69,7 +69,4 @@ echo '{"0x5BA134aBc8BA11Cf7868F4Dfb02497A3f1544Eb5": 0.25, "0x490a81a1939762E6AA
 
 # Submit the order intent to the Orion vault
 orion submit-order plain --order-intent-path order_intent.json
-
-# Submit the order intent to the Orion vault
-orion submit-order encrypted --portfolio-path portfolio.parquet
 ```
