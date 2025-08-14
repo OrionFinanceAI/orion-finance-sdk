@@ -7,7 +7,7 @@
 
 A Python Software Development Kit (SDK) to ease interactions with the Orion protocol and its Vaults. This repository provides tools and utilities for quants and developers to seamlessly integrate with Orion's [portfolio management on-chain infrastructure](https://github.com/OrionFinanceAI/protocol).
 
-aFor additional information, please refer to the [Orion documentation](https://docs.orionfinance.ai), and the curator section in particular.
+For additional information, please refer to the [Orion documentation](https://docs.orionfinance.ai), and the curator section in particular.
 
 ## Licences
 
