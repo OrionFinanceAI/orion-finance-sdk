@@ -5,8 +5,8 @@ import json
 import typer
 
 from .contracts import (
-    # OrionEncryptedVault,
-    # OrionTransparentVault,
+    OrionEncryptedVault,
+    OrionTransparentVault,
     VaultFactory,
 )
 from .cryptography import encrypt_order_intent
@@ -15,7 +15,7 @@ from .types import (
     VaultType,
     fee_type_to_int,
 )
-from .utils import validate_order
+from .utils import format_transaction_logs, validate_order
 
 app = typer.Typer()
 submit_order_app = typer.Typer()
@@ -46,37 +46,14 @@ def deploy_vault(
         management_fee=management_fee,
     )
 
-    print(f"✅ Transaction hash: {tx_result.tx_hash}")
-    print("=" * 60)
-
-    if tx_result.decoded_logs:
-        print("📋 Transaction Events:")
-        for i, log in enumerate(tx_result.decoded_logs, 1):
-            print(f"\n{i}. Event: {log.get('event', 'Unknown')}")
-
-            if log.get("args"):
-                args = log["args"]
-                print("   Arguments:")
-                for key, value in args.items():
-                    if key == "vaultType":
-                        vault_type_name = "Transparent" if value == 0 else "Encrypted"
-                        print(f"     {key}: {value} ({vault_type_name})")
-                    else:
-                        print(f"     {key}: {value}")
-
-            print(f"   Contract: {log.get('address', 'Unknown')}")
-            print(f"   Block: {log.get('blockNumber', 'Unknown')}")
-    else:
-        print("⚠️  No events found in transaction logs")
-
-    print("=" * 60)
+    # Format transaction logs
+    format_transaction_logs(tx_result, "Vault deployment transaction completed!")
 
     # Extract vault address if available
     vault_address = vault_factory.get_vault_address_from_result(tx_result)
     if vault_address:
-        print("\n🎉 Vault deployed successfully!")
         print(
-            f"📍 Vault address: {vault_address} <------------------- ADD THIS TO YOUR .env FILE TO INTERACT WITH THE VAULT."
+            f"\n📍 Vault address: {vault_address} <------------------- ADD THIS TO YOUR .env FILE TO INTERACT WITH THE VAULT."
         )
     else:
         print("\n❌ Could not extract vault address from transaction")
@@ -91,14 +68,15 @@ def plain(
     """Submit a plain order intent."""
     # JSON file input
     with open(order_intent_path, "r") as f:
-        order_intent_dict = json.load(f)
+        order_intent = json.load(f)
 
-    validated_order_intent = validate_order(order_intent=order_intent_dict, fuzz=False)
+    validated_order_intent = validate_order(order_intent=order_intent, fuzz=False)
 
-    orion_vault = TransparentVault()
+    orion_vault = OrionTransparentVault()
     tx_result = orion_vault.submit_order_intent(order_intent=validated_order_intent)
-    print(f"Transaction hash: {tx_result.tx_hash}")
-    print(f"Decoded logs: {tx_result.decoded_logs}")
+
+    # Format transaction logs
+    format_transaction_logs(tx_result, "Order intent submitted successfully!")
 
 
 @submit_order_app.command()
@@ -114,6 +92,6 @@ def encrypted(
 
     encrypted_order_intent = encrypt_order_intent(order_intent=validated_order_intent)
 
-    orion_vault = EncryptedVault()
+    orion_vault = OrionEncryptedVault()
 
     raise NotImplementedError

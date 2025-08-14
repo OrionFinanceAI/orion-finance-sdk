@@ -107,3 +107,39 @@ def round_with_fixed_sum(
     result[indices[:remainder]] += 1
 
     return result.tolist()
+
+
+def format_transaction_logs(
+    tx_result, success_message: str = "Transaction completed successfully!"
+):
+    """Format transaction logs in a human-readable way.
+
+    Args:
+        tx_result: Transaction result object with tx_hash and decoded_logs attributes
+        success_message: Custom success message to display at the end
+    """
+    print(f"✅ Transaction hash: {tx_result.tx_hash}")
+    print("=" * 60)
+
+    if tx_result.decoded_logs:
+        print("📋 Transaction Events:")
+        for i, log in enumerate(tx_result.decoded_logs, 1):
+            print(f"\n{i}. Event: {log.get('event', 'Unknown')}")
+
+            if log.get("args"):
+                args = log["args"]
+                print("   Arguments:")
+                for key, value in args.items():
+                    if key == "vaultType":
+                        vault_type_name = "Transparent" if value == 0 else "Encrypted"
+                        print(f"     {key}: {value} ({vault_type_name})")
+                    else:
+                        print(f"     {key}: {value}")
+
+            print(f"   Contract: {log.get('address', 'Unknown')}")
+            print(f"   Block: {log.get('blockNumber', 'Unknown')}")
+    else:
+        print("⚠️  No events found in transaction logs")
+
+    print("=" * 60)
+    print(f"🎉 {success_message}")

@@ -246,7 +246,7 @@ class OrionTransparentVault(OrionSmartContract):
         """Submit a portfolio order intent.
 
         Args:
-            order_intent: Dictionary mapping token addresses to amounts
+            order_intent: Dictionary mapping token addresses to values
             curator_private_key: Private key for signing the transaction
 
         Returns:
@@ -259,19 +259,19 @@ class OrionTransparentVault(OrionSmartContract):
         nonce = self.w3.eth.get_transaction_count(account.address)
 
         items = [
-            {"token": Web3.to_checksum_address(token), "amount": amount}
-            for token, amount in order_intent.items()
+            {"token": Web3.to_checksum_address(token), "value": value}
+            for token, value in order_intent.items()
         ]
 
         # Estimate gas needed for the transaction
-        gas_estimate = self.contract.functions.submitOrderIntent(items).estimate_gas(
+        gas_estimate = self.contract.functions.submitIntent(items).estimate_gas(
             {"from": account.address, "nonce": nonce}
         )
 
         # Add 20% buffer to gas estimate
         gas_limit = int(gas_estimate * 1.2)
 
-        tx = self.contract.functions.submitOrderIntent(items).build_transaction(
+        tx = self.contract.functions.submitIntent(items).build_transaction(
             {
                 "from": account.address,
                 "nonce": nonce,
