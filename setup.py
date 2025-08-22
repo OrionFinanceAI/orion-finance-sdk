@@ -32,7 +32,7 @@ class CustomBuild(build_py):
             "OrionTransparentVault",
             "OrionEncryptedVault",
         ]
-        os.makedirs("abis", exist_ok=True)
+        os.makedirs("src/abis", exist_ok=True)
 
         is_dev = os.getenv("ORION_DEV", "false").lower() == "true"
         branch = "dev" if is_dev else "main"
@@ -40,7 +40,7 @@ class CustomBuild(build_py):
 
         for i, contract in enumerate(abis):
             url = f"{base_url}/{subfolders_abis[i]}/{contract}.sol/{contract}.json"
-            dest = f"abis/{contract}.json"
+            dest = f"src/abis/{contract}.json"
             print(f"Downloading {contract} ABI...")
             urllib.request.urlretrieve(url, dest)
 
