@@ -1,4 +1,4 @@
-"""Main entry point for the Orion Python SDK."""
+"""Main entry point for the Orion Finance Python SDK."""
 
 from .cli import app
 

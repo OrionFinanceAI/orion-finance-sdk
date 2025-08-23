@@ -1,4 +1,4 @@
-"""Utility functions for the Orion Python SDK."""
+"""Utility functions for the Orion Finance Python SDK."""
 
 import random
 import uuid
@@ -62,7 +62,8 @@ def validate_order(order_intent: dict, fuzz: bool = False) -> dict:
 
     if fuzz:
         # Add remaining whitelisted assets with small random amounts
-        for asset in orion_config.whitelisted_assets:
+        whitelisted_assets = orion_config.whitelisted_assets
+        for asset in whitelisted_assets:
             if asset not in order_intent.keys():
                 order_intent[asset] = (
                     random.randint(1, 10) / 10**curator_intent_decimals

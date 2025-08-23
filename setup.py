@@ -1,4 +1,4 @@
-"""Setup script for the Orion Python SDK."""
+"""Setup script for the Orion Finance Python SDK."""
 
 import os
 import urllib.request
@@ -8,7 +8,7 @@ from setuptools.command.build_py import build_py
 
 
 class CustomBuild(build_py):
-    """Download the Orion contracts ABIs."""
+    """Download the Orion Finance contracts ABIs."""
 
     def run(self):
         """Run the build process."""
@@ -16,7 +16,7 @@ class CustomBuild(build_py):
         super().run()
 
     def download_abis(self):
-        """Download the Orion contracts ABIs."""
+        """Download the Orion Finance contracts ABIs."""
         subfolders_abis = [
             "",
             "factories",
@@ -32,15 +32,13 @@ class CustomBuild(build_py):
             "OrionTransparentVault",
             "OrionEncryptedVault",
         ]
-        os.makedirs("abis", exist_ok=True)
+        os.makedirs("src/abis", exist_ok=True)
 
-        is_dev = os.getenv("ORION_DEV", "false").lower() == "true"
-        branch = "dev" if is_dev else "main"
-        base_url = f"https://raw.githubusercontent.com/OrionFinanceAI/protocol/{branch}/artifacts/contracts"
+        base_url = "https://raw.githubusercontent.com/OrionFinanceAI/protocol/main/artifacts/contracts"
 
         for i, contract in enumerate(abis):
             url = f"{base_url}/{subfolders_abis[i]}/{contract}.sol/{contract}.json"
-            dest = f"abis/{contract}.json"
+            dest = f"src/abis/{contract}.json"
             print(f"Downloading {contract} ABI...")
             urllib.request.urlretrieve(url, dest)
 

@@ -1,4 +1,4 @@
-"""Type definitions for the Orion Python SDK."""
+"""Type definitions for the Orion Finance Python SDK."""
 
 from enum import Enum
 

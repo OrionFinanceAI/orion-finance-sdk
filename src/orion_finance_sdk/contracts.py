@@ -1,4 +1,4 @@
-"""Interactions with the Orion contracts."""
+"""Interactions with the Orion Finance protocol contracts."""
 
 import json
 import os
@@ -100,15 +100,14 @@ class OrionConfig(OrionSmartContract):
         super().__init__("OrionConfig", contract_address, rpc_url)
 
     @property
-    def whitelisted_assets(self) -> list[str]:
-        """Fetch all whitelisted vault addresses from the OrionConfig contract."""
-        assets_length = self.contract.functions.whitelistedAssetsLength().call()
-        assets = []
-        for i in range(assets_length):
-            asset_address = self.contract.functions.getWhitelistedAssetAt(i).call()
-            assets.append(asset_address.lower())
+    def curator_intent_decimals(self) -> int:
+        """Fetch the curator intent decimals from the OrionConfig contract."""
+        return self.contract.functions.curatorIntentDecimals().call()
 
-        return assets
+    @property
+    def whitelisted_assets(self) -> list[str]:
+        """Fetch all whitelisted assets from the OrionConfig contract."""
+        return self.contract.functions.getAllWhitelistedAssets().call()
 
     def is_whitelisted(self, token_address: str) -> bool:
         """Check if a token address is whitelisted."""
@@ -117,9 +116,14 @@ class OrionConfig(OrionSmartContract):
         ).call()
 
     @property
-    def curator_intent_decimals(self) -> int:
-        """Fetch the curator intent decimals from the OrionConfig contract."""
-        return self.contract.functions.curatorIntentDecimals().call()
+    def orion_transparent_vaults(self) -> list[str]:
+        """Fetch all Orion transparent vault addresses from the OrionConfig contract."""
+        return self.contract.functions.getAllOrionVaults(0).call()
+
+    @property
+    def orion_encrypted_vaults(self) -> list[str]:
+        """Fetch all Orion encrypted vault addresses from the OrionConfig contract."""
+        return self.contract.functions.getAllOrionVaults(1).call()
 
     def is_system_idle(self) -> bool:
         """Check if the system is in idle state, required for vault deployment."""
