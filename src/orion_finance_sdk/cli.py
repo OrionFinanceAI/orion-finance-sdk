@@ -6,7 +6,7 @@ import os
 import typer
 
 from .contracts import (
-    OrionEncryptedVault,
+    # OrionEncryptedVault,
     OrionTransparentVault,
     VaultFactory,
 )
@@ -84,7 +84,8 @@ def submit_order(
         vault = OrionTransparentVault()
     elif vault_address in config.orion_encrypted_vaults:
         encrypt = True
-        vault = OrionEncryptedVault()
+        # TODO: populate. Consider having a parent class for both transparent and encrypted vaults.
+        # vault = OrionEncryptedVault()
     else:
         raise ValueError(
             f"Vault address {vault_address} not found in OrionConfig contract."
