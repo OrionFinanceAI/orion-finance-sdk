@@ -1,0 +1,49 @@
+name: release
+
+on:
+  workflow_run:
+    workflows: ["build"]
+    types:
+      - completed
+    branches:
+      - main
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    concurrency: release
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Cache Python packages
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: ${{ runner.os }}-python-${{ hashFiles('**/requirements.txt', '**/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-python-
+
+      - name: Install uv
+        run: |
+          make uv-download
+
+      - name: Install dependencies
+
+        run: |
+          make venv
+          uv pip install -e ."[dev]"
+      
+      - name: Build package
+        run: uv build
+
+      - name: Publish to Test PyPI
+        uses: pypa/gh-action-pypi-publish@v1.12.4
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_TOKEN }}
