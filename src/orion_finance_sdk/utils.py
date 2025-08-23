@@ -1,4 +1,4 @@
-"""Utility functions for the Orion Python SDK."""
+"""Utility functions for the Orion Finance Python SDK."""
 
 import random
 import uuid

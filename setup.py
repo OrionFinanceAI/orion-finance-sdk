@@ -1,4 +1,4 @@
-"""Setup script for the Orion Python SDK."""
+"""Setup script for the Orion Finance Python SDK."""
 
 import os
 import urllib.request
@@ -8,7 +8,7 @@ from setuptools.command.build_py import build_py
 
 
 class CustomBuild(build_py):
-    """Download the Orion contracts ABIs."""
+    """Download the Orion Finance contracts ABIs."""
 
     def run(self):
         """Run the build process."""
@@ -16,7 +16,7 @@ class CustomBuild(build_py):
         super().run()
 
     def download_abis(self):
-        """Download the Orion contracts ABIs."""
+        """Download the Orion Finance contracts ABIs."""
         subfolders_abis = [
             "",
             "factories",

@@ -1,4 +1,4 @@
-"""Interactions with the Orion contracts."""
+"""Interactions with the Orion Finance protocol contracts."""
 
 import json
 import os

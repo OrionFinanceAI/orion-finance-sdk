@@ -1,4 +1,4 @@
-"""Command line interface for the Orion Python SDK."""
+"""Command line interface for the Orion Finance Python SDK."""
 
 import json
 import os
@@ -10,7 +10,7 @@ from .contracts import (
     OrionTransparentVault,
     VaultFactory,
 )
-from .cryptography import encrypt_order_intent
+from .encrypt import encrypt_order_intent
 from .types import (
     FeeType,
     VaultType,
