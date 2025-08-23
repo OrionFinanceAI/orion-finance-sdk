@@ -9,9 +9,9 @@ A Python Software Development Kit (SDK) to ease interactions with the Orion Fina
 
 For additional information, please refer to the [Orion documentation](https://docs.orionfinance.ai), and the curator section in particular.
 
-## Licences
+## Licence
 
-This project is licensed under the MIT License. See the [`LICENSE`](./LICENSE) file for the full text.
+This software is distributed under the BSD-3-Clause license. See the [`LICENSE`](./LICENSE) file for the full text.
 
 ## Environment Variables Setup
 
