@@ -34,9 +34,7 @@ class CustomBuild(build_py):
         ]
         os.makedirs("src/abis", exist_ok=True)
 
-        is_dev = os.getenv("ORION_DEV", "false").lower() == "true"
-        branch = "dev" if is_dev else "main"
-        base_url = f"https://raw.githubusercontent.com/OrionFinanceAI/protocol/{branch}/artifacts/contracts"
+        base_url = "https://raw.githubusercontent.com/OrionFinanceAI/protocol/main/artifacts/contracts"
 
         for i, contract in enumerate(abis):
             url = f"{base_url}/{subfolders_abis[i]}/{contract}.sol/{contract}.json"

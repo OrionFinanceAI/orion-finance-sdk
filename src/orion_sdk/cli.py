@@ -1,6 +1,7 @@
 """Command line interface for the Orion Python SDK."""
 
 import json
+import os
 
 import typer
 
@@ -18,8 +19,6 @@ from .types import (
 from .utils import format_transaction_logs, validate_order
 
 app = typer.Typer()
-submit_order_app = typer.Typer()
-app.add_typer(submit_order_app, name="submit-order")
 
 
 @app.command()
@@ -33,7 +32,7 @@ def deploy_vault(
     performance_fee: int = typer.Option(..., help="Performance fee in basis points"),
     management_fee: int = typer.Option(..., help="Management fee in basis points"),
 ):
-    """Deploy an Orion vault."""
+    """Deploy an Orion vault with customizable fee structure, name, and symbol. The vault can be either transparent or encrypted."""
     fee_type = fee_type_to_int[fee_type.value]
 
     vault_factory = VaultFactory(vault_type=vault_type.value)
@@ -59,39 +58,50 @@ def deploy_vault(
         print("\n❌ Could not extract vault address from transaction")
 
 
-@submit_order_app.command()
-def plain(
+@app.command()
+def submit_order(
     order_intent_path: str = typer.Option(
         ..., help="Path to JSON file containing order intent"
     ),
+    vault_address: str | None = typer.Option(None, help="Address of the Orion vault"),
+    fuzz: bool = typer.Option(False, help="Fuzz the order intent"),
 ) -> None:
-    """Submit a plain order intent."""
+    """Submit an order intent to an Orion vault. The order intent can be either transparent or encrypted."""
+    if not vault_address:
+        vault_address = os.getenv("ORION_VAULT_ADDRESS")
+        if not vault_address:
+            raise ValueError(
+                "Vault address must be provided either as parameter or ORION_VAULT_ADDRESS environment variable."
+            )
+
+    from .contracts import OrionConfig
+
+    config = OrionConfig()
+
+    if vault_address in config.orion_transparent_vaults:
+        encrypt = False
+        fuzz = False
+        vault = OrionTransparentVault()
+    elif vault_address in config.orion_encrypted_vaults:
+        encrypt = True
+        vault = OrionEncryptedVault()
+    else:
+        raise ValueError(
+            f"Vault address {vault_address} not found in OrionConfig contract."
+        )
+
     # JSON file input
     with open(order_intent_path, "r") as f:
         order_intent = json.load(f)
 
-    validated_order_intent = validate_order(order_intent=order_intent, fuzz=False)
+    validated_order_intent = validate_order(order_intent=order_intent, fuzz=fuzz)
 
-    orion_vault = OrionTransparentVault()
-    tx_result = orion_vault.submit_order_intent(order_intent=validated_order_intent)
+    if encrypt:
+        validated_order_intent = encrypt_order_intent(
+            order_intent=validated_order_intent
+        )
+
+    tx_result = vault.submit_order_intent(order_intent=validated_order_intent)
 
     # Format transaction logs
     format_transaction_logs(tx_result, "Order intent submitted successfully!")
-
-
-@submit_order_app.command()
-def encrypted(
-    portfolio_path: str = typer.Option(..., help="Path to the portfolio parquet file"),
-    fuzz: bool = typer.Option(False, help="Fuzz the order intent"),
-) -> None:
-    """Submit an encrypted order intent."""
-    # Mock to test fuzzer.
-    order_intent_dict = {"0xd81eaae8e6195e67695be9ac447c9d6214cb717a": 1}
-
-    validated_order_intent = validate_order(order_intent=order_intent_dict, fuzz=fuzz)
-
-    encrypted_order_intent = encrypt_order_intent(order_intent=validated_order_intent)
-
-    orion_vault = OrionEncryptedVault()
-
-    raise NotImplementedError
