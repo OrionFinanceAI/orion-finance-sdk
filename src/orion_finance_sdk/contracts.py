@@ -3,6 +3,7 @@
 import json
 import os
 from dataclasses import dataclass
+from importlib import resources
 
 import typer
 from dotenv import load_dotenv
@@ -25,11 +26,20 @@ class TransactionResult:
 
 def load_contract_abi(contract_name: str) -> list[dict]:
     """Load the ABI for a given contract."""
-    # Get directory of this script
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    abi_path = os.path.join(script_dir, "..", "abis", f"{contract_name}.json")
-    with open(abi_path) as f:
-        return json.load(f)["abi"]
+    try:
+        # Try to load from package data (when installed from PyPI)
+        with (
+            resources.files("orion_finance_sdk")
+            .joinpath("abis", f"{contract_name}.json")
+            .open() as f
+        ):
+            return json.load(f)["abi"]
+    except (FileNotFoundError, AttributeError):
+        # Fallback to local development path
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        abi_path = os.path.join(script_dir, "..", "abis", f"{contract_name}.json")
+        with open(abi_path) as f:
+            return json.load(f)["abi"]
 
 
 class OrionSmartContract:
