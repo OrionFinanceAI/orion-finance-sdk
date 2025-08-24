@@ -1,7 +1,10 @@
 """Encryption operations for the Orion Finance Python SDK."""
 
 import json
+import os
 import subprocess
+
+from .utils import validate_env_var
 
 
 def encrypt_order_intent(order_intent: dict[str, int]) -> tuple[dict[str, bytes], str]:
@@ -11,17 +14,41 @@ def encrypt_order_intent(order_intent: dict[str, int]) -> tuple[dict[str, bytes]
     #     print_installation_guide()
     #     sys.exit(1)
 
+    curator_address = os.getenv("CURATOR_ADDRESS")
+    validate_env_var(
+        curator_address,
+        error_message=(
+            "CURATOR_ADDRESS environment variable is missing or invalid. "
+            "Please set CURATOR_ADDRESS in your .env file or as an environment variable. "
+        ),
+    )
+    vault_address = os.getenv("ORION_VAULT_ADDRESS")
+    validate_env_var(
+        vault_address,
+        error_message=(
+            "ORION_VAULT_ADDRESS environment variable is missing or invalid. "
+            "Please set ORION_VAULT_ADDRESS in your .env file or as an environment variable. "
+        ),
+    )
+
     tokens = [token for token in order_intent.keys()]
     values = [value for value in order_intent.values()]
 
-    # TODO: call @orion-finance/sdk npm package.
+    payload = {
+        "vaultAddress": vault_address,
+        "curatorAddress": curator_address,
+        "values": values,
+    }
+
     result = subprocess.run(
         ["npm", "run", "start"],
         cwd="../orion-finance-sdk-js/",
+        input=json.dumps(payload),
         capture_output=True,
         text=True,
         check=False,
     )
+    # TODO: call @orion-finance/sdk npm package.
 
     stdout = result.stdout.strip()
     json_start = stdout.find("{")
