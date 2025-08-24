@@ -1,6 +1,7 @@
 """Utility functions for the Orion Finance Python SDK."""
 
 import random
+import sys
 import uuid
 
 import numpy as np
@@ -12,10 +13,11 @@ MAX_PERFORMANCE_FEE = 5000  # 50% in basis points
 MAX_MANAGEMENT_FEE = 500  # 5% in basis points
 
 
-def validate_address(address: str) -> None:
-    """Validate that the address is not zero."""
-    if not address or address == "0x0000000000000000000000000000000000000000":
-        raise ValueError("Address cannot be zero")
+def validate_env_var(env_var: str, error_message: str) -> None:
+    """Validate that the environment variable is not zero."""
+    if not env_var or env_var == "0x0000000000000000000000000000000000000000":
+        print(error_message)
+        sys.exit(1)
 
 
 def validate_performance_fee(performance_fee: int) -> None:

@@ -2,15 +2,16 @@
 
 import json
 import os
+import sys
 from dataclasses import dataclass
 from importlib import resources
 
-import typer
 from dotenv import load_dotenv
 from web3 import Web3
 from web3.types import TxReceipt
 
-from .utils import validate_address, validate_management_fee, validate_performance_fee
+from .types import VaultType
+from .utils import validate_env_var, validate_management_fee, validate_performance_fee
 
 load_dotenv()
 
@@ -45,12 +46,16 @@ def load_contract_abi(contract_name: str) -> list[dict]:
 class OrionSmartContract:
     """Base class for Orion smart contracts."""
 
-    def __init__(
-        self, contract_name: str, contract_address: str, rpc_url: str | None = None
-    ):
+    def __init__(self, contract_name: str, contract_address: str):
         """Initialize a smart contract."""
-        if not rpc_url:
-            rpc_url = os.getenv("RPC_URL")
+        rpc_url = os.getenv("RPC_URL")
+        validate_env_var(
+            rpc_url,
+            error_message=(
+                "RPC_URL environment variable is missing or invalid. "
+                "Please set RPC_URL in your .env file or as an environment variable. "
+            ),
+        )
 
         self.w3 = Web3(Web3.HTTPProvider(rpc_url))
         self.contract_name = contract_name
@@ -103,11 +108,13 @@ class OrionSmartContract:
 class OrionConfig(OrionSmartContract):
     """OrionConfig contract."""
 
-    def __init__(self, contract_address: str | None = None, rpc_url: str | None = None):
+    def __init__(self):
         """Initialize the OrionConfig contract."""
-        if not contract_address:
-            contract_address = os.getenv("CONFIG_ADDRESS")
-        super().__init__("OrionConfig", contract_address, rpc_url)
+        contract_address = "0xE4F0e2b653d81F39e6bF774D2b8BBdEBED8c8A92"
+        super().__init__(
+            contract_name="OrionConfig",
+            contract_address=contract_address,
+        )
 
     @property
     def curator_intent_decimals(self) -> int:
@@ -147,48 +154,58 @@ class VaultFactory(OrionSmartContract):
         self,
         vault_type: str,
         contract_address: str | None = None,
-        rpc_url: str | None = None,
     ):
         """Initialize the VaultFactory contract."""
-        if not contract_address:
-            contract_address = os.getenv(f"{vault_type.upper()}_VAULT_FACTORY_ADDRESS")
+        if vault_type == VaultType.TRANSPARENT:
+            contract_address = "0x53622EF72745A9F8331bFF896D6e2C11be16c76c"
+        elif vault_type == VaultType.ENCRYPTED:
+            contract_address = "0x349BF8E3EF47f0f4Ec7342aA16c1e282b45DAD17"
+
         super().__init__(
-            f"{vault_type.capitalize()}VaultFactory", contract_address, rpc_url
+            contract_name=f"{vault_type.capitalize()}VaultFactory",
+            contract_address=contract_address,
         )
 
     def create_orion_vault(
         self,
-        deployer_private_key: str | None = None,
-        curator_address: str | None = None,
-        name: str | None = None,
-        symbol: str | None = None,
-        fee_type: int | None = None,
-        performance_fee: int | None = None,
-        management_fee: int | None = None,
+        name: str,
+        symbol: str,
+        fee_type: int,
+        performance_fee: int,
+        management_fee: int,
     ) -> TransactionResult:
         """Create an Orion vault for a given curator address."""
         config = OrionConfig()
 
-        if not curator_address:
-            curator_address = os.getenv("CURATOR_ADDRESS")
-        validate_address(curator_address)
+        curator_address = os.getenv("CURATOR_ADDRESS")
+        validate_env_var(
+            curator_address,
+            error_message=(
+                "CURATOR_ADDRESS environment variable is missing or invalid. "
+                "Please set CURATOR_ADDRESS in your .env file or as an environment variable. "
+            ),
+        )
 
-        if not deployer_private_key:
-            # In principle, deployer and curator are different accounts.
-            deployer_private_key = os.getenv("VAULT_DEPLOYER_PRIVATE_KEY")
-        try:
-            account = config.w3.eth.account.from_key(deployer_private_key)
-            validate_address(account.address)
-        except Exception as e:
-            raise typer.BadParameter(f"Invalid VAULT_DEPLOYER_PRIVATE_KEY: {e}")
+        deployer_private_key = os.getenv("VAULT_DEPLOYER_PRIVATE_KEY")
+        validate_env_var(
+            deployer_private_key,
+            error_message=(
+                "VAULT_DEPLOYER_PRIVATE_KEY environment variable is missing or invalid. "
+                "Please set VAULT_DEPLOYER_PRIVATE_KEY in your .env file or as an environment variable. "
+            ),
+        )
+        account = self.w3.eth.account.from_key(deployer_private_key)
+        validate_env_var(
+            account.address,
+            error_message="Invalid VAULT_DEPLOYER_PRIVATE_KEY.",
+        )
 
         validate_performance_fee(performance_fee)
         validate_management_fee(management_fee)
 
         if not config.is_system_idle():
-            raise typer.BadParameter(
-                "System is not idle. Cannot deploy vault at this time."
-            )
+            print("System is not idle. Cannot deploy vault at this time.")
+            sys.exit(1)
 
         account = self.w3.eth.account.from_key(deployer_private_key)
         nonce = self.w3.eth.get_transaction_count(account.address)
@@ -246,28 +263,38 @@ class VaultFactory(OrionSmartContract):
 class OrionTransparentVault(OrionSmartContract):
     """OrionTransparentVault contract."""
 
-    def __init__(self, contract_address: str | None = None, rpc_url: str | None = None):
+    def __init__(self):
         """Initialize the OrionTransparentVault contract."""
-        if not contract_address:
-            contract_address = os.getenv("ORION_VAULT_ADDRESS")
-        super().__init__("OrionTransparentVault", contract_address, rpc_url)
+        contract_address = os.getenv("ORION_VAULT_ADDRESS")
+        validate_env_var(
+            contract_address,
+            error_message=(
+                "ORION_VAULT_ADDRESS environment variable is missing or invalid. "
+                "Please set ORION_VAULT_ADDRESS in your .env file or as an environment variable. "
+            ),
+        )
+        super().__init__("OrionTransparentVault", contract_address)
 
     def submit_order_intent(
         self,
         order_intent: dict[str, int],
-        curator_private_key: str | None = None,
     ) -> TransactionResult:
         """Submit a portfolio order intent.
 
         Args:
             order_intent: Dictionary mapping token addresses to values
-            curator_private_key: Private key for signing the transaction
 
         Returns:
             TransactionResult
         """
-        if not curator_private_key:
-            curator_private_key = os.getenv("CURATOR_PRIVATE_KEY")
+        curator_private_key = os.getenv("CURATOR_PRIVATE_KEY")
+        validate_env_var(
+            curator_private_key,
+            error_message=(
+                "CURATOR_PRIVATE_KEY environment variable is missing or invalid. "
+                "Please set CURATOR_PRIVATE_KEY in your .env file or as an environment variable. "
+            ),
+        )
 
         account = self.w3.eth.account.from_key(curator_private_key)
         nonce = self.w3.eth.get_transaction_count(account.address)
@@ -314,6 +341,6 @@ class OrionTransparentVault(OrionSmartContract):
 class OrionEncryptedVault(OrionSmartContract):
     """OrionEncryptedVault contract."""
 
-    def __init__(self, contract_address: str | None = None, rpc_url: str | None = None):
+    def __init__(self, contract_address: str | None = None):
         """Initialize the OrionEncryptedVault contract."""
         raise NotImplementedError
