@@ -1,39 +1,32 @@
 """Encryption operations for the Orion Finance Python SDK."""
 
 import subprocess
-import sys
+
+# import sys
 
 
-def check_npm_available() -> bool:
-    """Check if npm is available on the system."""
-    try:
-        result = subprocess.run(
-            ["npm", "--version"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        return result.returncode == 0
-    except (subprocess.SubprocessError, FileNotFoundError):
-        return False
+def encrypt_order_intent(order_intent: dict) -> dict:
+    """Encrypt an order intent."""
+    # TODO: bring back this check after npm package is published.
+    # if not check_orion_finance_sdk_installed():
+    #     print_installation_guide()
+    #     sys.exit(1)
 
+    # TODO: call @orion-finance/sdk npm package.
+    result = subprocess.run(
+        ["npm", "run", "start"],
+        cwd="../orion-finance-sdk-js/",
+        capture_output=True,
+        text=True,
+        check=False,
+    )
 
-def check_orion_finance_sdk_installed() -> bool:
-    """Check if @orion-finance/sdk npm package is installed."""
-    if not check_npm_available():
-        return False
+    print(result.stdout)
 
-    try:
-        result = subprocess.run(
-            ["npm", "list", "@orion-finance/sdk"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+    breakpoint()
 
-        return result.returncode == 0 and "empty" not in result.stdout
-    except (subprocess.SubprocessError, FileNotFoundError):
-        return False
+    # TODO: return encrypted order intent.
+    raise NotImplementedError("Encryption not implemented yet.")
 
 
 def print_installation_guide():
@@ -70,12 +63,33 @@ def print_installation_guide():
     print("=" * 80)
 
 
-def encrypt_order_intent(order_intent: dict) -> dict:
-    """Encrypt an order intent."""
-    if not check_orion_finance_sdk_installed():
-        print_installation_guide()
-        sys.exit(1)
+def check_orion_finance_sdk_installed() -> bool:
+    """Check if @orion-finance/sdk npm package is installed."""
+    if not check_npm_available():
+        return False
 
-    # TODO: call @orion-finance/sdk subprocess, capture output.
-    # TODO: return encrypted order intent.
-    raise NotImplementedError("Encryption not implemented yet.")
+    try:
+        result = subprocess.run(
+            ["npm", "list", "@orion-finance/sdk"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        return result.returncode == 0 and "empty" not in result.stdout
+    except (subprocess.SubprocessError, FileNotFoundError):
+        return False
+
+
+def check_npm_available() -> bool:
+    """Check if npm is available on the system."""
+    try:
+        result = subprocess.run(
+            ["npm", "--version"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        return result.returncode == 0
+    except (subprocess.SubprocessError, FileNotFoundError):
+        return False

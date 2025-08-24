@@ -1,9 +1,10 @@
 """Setup script for the Orion Finance Python SDK."""
 
 import os
+import shutil
 import urllib.request
 
-from setuptools import setup
+from setuptools import find_packages, setup
 from setuptools.command.build_py import build_py
 
 
@@ -14,6 +15,7 @@ class CustomBuild(build_py):
         """Run the build process."""
         self.download_abis()
         super().run()
+        self.copy_abis_to_package()
 
     def download_abis(self):
         """Download the Orion Finance contracts ABIs."""
@@ -42,9 +44,26 @@ class CustomBuild(build_py):
             print(f"Downloading {contract} ABI...")
             urllib.request.urlretrieve(url, dest)
 
+    def copy_abis_to_package(self):
+        """Copy ABI files into the package directory for distribution."""
+        package_dir = os.path.join(self.build_lib, "orion_finance_sdk")
+        abis_dir = os.path.join(package_dir, "abis")
+        os.makedirs(abis_dir, exist_ok=True)
+
+        # Copy all ABI files to the package directory
+        src_abis_dir = "src/abis"
+        for abi_file in os.listdir(src_abis_dir):
+            if abi_file.endswith(".json"):
+                src_path = os.path.join(src_abis_dir, abi_file)
+                dst_path = os.path.join(abis_dir, abi_file)
+                shutil.copy2(src_path, dst_path)
+
 
 setup(
     cmdclass={
         "build_py": CustomBuild,
-    }
+    },
+    packages=find_packages(where="src"),
+    package_dir={"": "src"},
+    include_package_data=True,
 )

@@ -16,7 +16,7 @@ from .types import (
     VaultType,
     fee_type_to_int,
 )
-from .utils import format_transaction_logs, validate_order
+from .utils import format_transaction_logs, validate_env_var, validate_order
 
 app = typer.Typer()
 
@@ -52,7 +52,7 @@ def deploy_vault(
     vault_address = vault_factory.get_vault_address_from_result(tx_result)
     if vault_address:
         print(
-            f"\n📍 Vault address: {vault_address} <------------------- ADD THIS TO YOUR .env FILE TO INTERACT WITH THE VAULT."
+            f"\n📍 ORION_VAULT_ADDRESS={vault_address} <------------------- COPY THIS TO YOUR .env FILE TO INTERACT WITH THE VAULT."
         )
     else:
         print("\n❌ Could not extract vault address from transaction")
@@ -63,16 +63,17 @@ def submit_order(
     order_intent_path: str = typer.Option(
         ..., help="Path to JSON file containing order intent"
     ),
-    vault_address: str | None = typer.Option(None, help="Address of the Orion vault"),
     fuzz: bool = typer.Option(False, help="Fuzz the order intent"),
 ) -> None:
     """Submit an order intent to an Orion vault. The order intent can be either transparent or encrypted."""
-    if not vault_address:
-        vault_address = os.getenv("ORION_VAULT_ADDRESS")
-        if not vault_address:
-            raise ValueError(
-                "Vault address must be provided either as parameter or ORION_VAULT_ADDRESS environment variable."
-            )
+    vault_address = os.getenv("ORION_VAULT_ADDRESS")
+    validate_env_var(
+        vault_address,
+        error_message=(
+            "ORION_VAULT_ADDRESS environment variable is missing or invalid. "
+            "Please set ORION_VAULT_ADDRESS in your .env file or as an environment variable. "
+        ),
+    )
 
     from .contracts import OrionConfig
 
