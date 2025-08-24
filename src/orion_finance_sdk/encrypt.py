@@ -1,16 +1,18 @@
 """Encryption operations for the Orion Finance Python SDK."""
 
+import json
 import subprocess
 
-# import sys
 
-
-def encrypt_order_intent(order_intent: dict) -> dict:
+def encrypt_order_intent(order_intent: dict[str, int]) -> tuple[dict[str, bytes], str]:
     """Encrypt an order intent."""
     # TODO: bring back this check after npm package is published.
     # if not check_orion_finance_sdk_installed():
     #     print_installation_guide()
     #     sys.exit(1)
+
+    tokens = [token for token in order_intent.keys()]
+    values = [value for value in order_intent.values()]
 
     # TODO: call @orion-finance/sdk npm package.
     result = subprocess.run(
@@ -21,12 +23,18 @@ def encrypt_order_intent(order_intent: dict) -> dict:
         check=False,
     )
 
-    print(result.stdout)
+    stdout = result.stdout.strip()
+    json_start = stdout.find("{")
+    json_str = stdout[json_start:]
+    data = json.loads(json_str)
 
-    breakpoint()
+    encrypted_values = data["encryptedValues"]
 
-    # TODO: return encrypted order intent.
-    raise NotImplementedError("Encryption not implemented yet.")
+    encrypted_intent = dict(zip(tokens, encrypted_values))
+
+    input_proof = data["inputProof"]
+
+    return encrypted_intent, input_proof
 
 
 def print_installation_guide():
