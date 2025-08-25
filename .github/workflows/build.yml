@@ -42,7 +42,7 @@ jobs:
       - name: Install dependencies
         run: |
           make venv
-          uv sync --frozen
+          uv sync --frozen --extra dev
           make install
         
       - name: Run style checks
