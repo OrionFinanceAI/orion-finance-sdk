@@ -1,0 +1,32 @@
+{
+  "name": "@orion-finance/sdk",
+  "version": "0.1.0",
+  "description": "A JavaScript SDK for Orion Finance protocol and Zama TFHE tools",
+  "main": "src/index.js",
+  "author": "Orion Finance",
+  "license": "BSD-3-Clause",
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OrionFinanceAI/orion-finance-sdk-js/"
+  },
+  "bugs": {
+    "url": "https://github.com/OrionFinanceAI/orion-finance-sdk-js/issues"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "build": "esbuild src/index.js --bundle --platform=node --outfile=dist/bundle.js",
+    "prettier": "prettier --write \"**/*.{js,json,md,sol,ts,yml}\"",
+    "prettier:check": "prettier --check \"**/*.{js,json,md,sol,ts,yml}\""
+  },
+  "dependencies": {
+    "@zama-fhe/relayer-sdk": "^0.1.2",
+    "ethers": "^6.15.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.9",
+    "prettier": "^3.4.2"
+  }
+}

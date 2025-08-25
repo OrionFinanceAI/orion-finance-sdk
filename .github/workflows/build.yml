@@ -20,6 +20,11 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Use Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+
       - name: Cache Python packages
         uses: actions/cache@v4
         with:
@@ -35,8 +40,7 @@ jobs:
       - name: Install dependencies
         run: |
           make venv
-          uv pip install -e ."[dev]"
-          uv run pre-commit install
+          make install
         
       - name: Run style checks
         run: |
