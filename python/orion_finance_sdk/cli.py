@@ -6,7 +6,7 @@ import os
 import typer
 
 from .contracts import (
-    # OrionEncryptedVault,
+    OrionEncryptedVault,
     OrionTransparentVault,
     VaultFactory,
 )
@@ -75,35 +75,29 @@ def submit_order(
         ),
     )
 
+    # JSON file input
+    with open(order_intent_path, "r") as f:
+        order_intent = json.load(f)
+
     from .contracts import OrionConfig
 
     config = OrionConfig()
 
     if vault_address in config.orion_transparent_vaults:
-        encrypt = False
-        fuzz = False
+        output_order_intent = validate_order(order_intent=order_intent)
         vault = OrionTransparentVault()
+        tx_result = vault.submit_order_intent(order_intent=output_order_intent)
     elif vault_address in config.orion_encrypted_vaults:
-        encrypt = True
-        # TODO: populate. Consider having a parent class for both transparent and encrypted vaults.
-        # vault = OrionEncryptedVault()
-    else:
-        raise ValueError(
-            f"Vault address {vault_address} not found in OrionConfig contract."
-        )
-
-    # JSON file input
-    with open(order_intent_path, "r") as f:
-        order_intent = json.load(f)
-
-    validated_order_intent = validate_order(order_intent=order_intent, fuzz=fuzz)
-
-    if encrypt:
-        validated_order_intent = encrypt_order_intent(
+        validated_order_intent = validate_order(order_intent=order_intent, fuzz=fuzz)
+        output_order_intent, input_proof = encrypt_order_intent(
             order_intent=validated_order_intent
         )
 
-    tx_result = vault.submit_order_intent(order_intent=validated_order_intent)
+        vault = OrionEncryptedVault()
+        tx_result = vault.submit_order_intent(
+            order_intent=output_order_intent, input_proof=input_proof
+        )
+    else:
+        raise ValueError(f"Vault address {vault_address} not in OrionConfig contract.")
 
-    # Format transaction logs
     format_transaction_logs(tx_result, "Order intent submitted successfully!")

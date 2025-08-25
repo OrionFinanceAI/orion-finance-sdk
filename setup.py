@@ -34,13 +34,13 @@ class CustomBuild(build_py):
             "OrionTransparentVault",
             "OrionEncryptedVault",
         ]
-        os.makedirs("src/abis", exist_ok=True)
+        os.makedirs("python/abis", exist_ok=True)
 
         base_url = "https://raw.githubusercontent.com/OrionFinanceAI/protocol/main/artifacts/contracts"
 
         for i, contract in enumerate(abis):
             url = f"{base_url}/{subfolders_abis[i]}/{contract}.sol/{contract}.json"
-            dest = f"src/abis/{contract}.json"
+            dest = f"python/abis/{contract}.json"
             print(f"Downloading {contract} ABI...")
             urllib.request.urlretrieve(url, dest)
 
@@ -51,19 +51,19 @@ class CustomBuild(build_py):
         os.makedirs(abis_dir, exist_ok=True)
 
         # Copy all ABI files to the package directory
-        src_abis_dir = "src/abis"
-        for abi_file in os.listdir(src_abis_dir):
+        python_abis_dir = "python/abis"
+        for abi_file in os.listdir(python_abis_dir):
             if abi_file.endswith(".json"):
-                src_path = os.path.join(src_abis_dir, abi_file)
+                py_path = os.path.join(python_abis_dir, abi_file)
                 dst_path = os.path.join(abis_dir, abi_file)
-                shutil.copy2(src_path, dst_path)
+                shutil.copy2(py_path, dst_path)
 
 
 setup(
     cmdclass={
         "build_py": CustomBuild,
     },
-    packages=find_packages(where="src"),
-    package_dir={"": "src"},
+    packages=find_packages(where="python"),
+    package_dir={"": "python"},
     include_package_data=True,
 )

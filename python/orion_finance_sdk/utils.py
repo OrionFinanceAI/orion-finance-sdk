@@ -36,7 +36,7 @@ def validate_management_fee(management_fee: int) -> None:
         )
 
 
-def validate_order(order_intent: dict, fuzz: bool = False) -> dict:
+def validate_order(order_intent: dict[str, int], fuzz: bool = False) -> dict[str, int]:
     """Validate an order intent."""
     from .contracts import OrionConfig
 
@@ -74,6 +74,11 @@ def validate_order(order_intent: dict, fuzz: bool = False) -> dict:
             token: weight / sum(order_intent.values())
             for token, weight in order_intent.items()
         }
+
+        # Shuffle the order_intent to avoid dust amounts always being last
+        items = list(order_intent.items())
+        random.shuffle(items)
+        order_intent = dict(items)
 
     order_intent = {
         token: weight * 10**curator_intent_decimals
