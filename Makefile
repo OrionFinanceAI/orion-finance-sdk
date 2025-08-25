@@ -10,10 +10,14 @@ venv:
 
 .PHONY: install
 install:
-	uv pip install -e ."[dev]"
-	uv run pre-commit install
+	uv pip install -e .
 	cd js && npm install && npm run build
 	./scripts/build_js.sh
+
+.PHONY: install-dev
+install-dev:
+	uv pip install -e ."[dev]"
+	uv run pre-commit install
 
 .PHONY: codestyle
 codestyle:

@@ -42,20 +42,11 @@ jobs:
       - name: Install dependencies
         run: |
           make venv
+          uv sync --frozen
           make install
         
       - name: Run style checks
         run: |
-          echo "Current directory: $(pwd)"
-          echo "Node.js version: $(node --version)"
-          echo "npm version: $(npm --version)"
-          echo "Python version: $(python --version)"
-          echo "uv version: $(uv --version)"
-          echo "Checking if js directory exists:"
-          ls -la js/
-          echo "Checking if js/package.json exists:"
-          cat js/package.json
-          echo "Running check-codestyle:"
           make check-codestyle
 
       - name: Run docstrings checks
