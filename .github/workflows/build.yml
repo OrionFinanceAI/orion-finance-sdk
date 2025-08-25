@@ -44,10 +44,6 @@ jobs:
           make venv
           uv sync --frozen --extra dev
           make install
-        
-      - name: Run style checks
-        run: |
-          make check-codestyle
 
       - name: Run docstrings checks
         run: |

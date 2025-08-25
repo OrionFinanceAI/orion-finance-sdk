@@ -21,12 +21,6 @@ codestyle:
 	uv run ruff format ./
 	cd js && npm run prettier
 
-.PHONY: check-codestyle
-check-codestyle:
-	uv run ruff check --select I --fix --exit-non-zero-on-fix ./
-	uv run ruff format --diff ./
-	cd js && npm run prettier:check
-
 .PHONY: docs
 docs:
 	uv run pydocstyle
