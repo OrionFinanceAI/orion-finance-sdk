@@ -3,6 +3,7 @@
 import random
 import sys
 import uuid
+from pathlib import Path
 
 import numpy as np
 
@@ -11,6 +12,43 @@ random.seed(uuid.uuid4().int)  # uuid-based random seed for irreproducibility.
 # Validation constants matching smart contract requirements
 MAX_PERFORMANCE_FEE = 5000  # 50% in basis points
 MAX_MANAGEMENT_FEE = 500  # 5% in basis points
+
+
+def ensure_env_file(env_file_path: Path = Path.cwd() / ".env"):
+    """Check if .env file exists in the directory, create it with template if not.
+
+    Args:
+        env_file_path: Path to the .env file
+    """
+    if not env_file_path.exists():
+        # Create .env file with template
+        env_template = """# Orion Finance SDK Environment Variables
+
+# RPC URL for blockchain connection
+RPC_URL=
+
+# Curator contract address
+CURATOR_ADDRESS=
+
+# Private key for vault deployment
+VAULT_DEPLOYER_PRIVATE_KEY=
+
+# Private key for curator operations
+CURATOR_PRIVATE_KEY=
+
+# Vault address
+# ORION_VAULT_ADDRESS=
+"""
+
+        try:
+            with open(env_file_path, "w") as f:
+                f.write(env_template)
+            print(f"✅ Created .env file at {env_file_path}")
+            print(
+                "📝 Please update the .env file with your actual configuration values"
+            )
+        except:
+            pass
 
 
 def validate_env_var(env_var: str, error_message: str) -> None:
