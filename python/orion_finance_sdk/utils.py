@@ -51,9 +51,9 @@ CURATOR_PRIVATE_KEY=
             pass
 
 
-def validate_env_var(env_var: str, error_message: str) -> None:
+def validate_var(var: str, error_message: str) -> None:
     """Validate that the environment variable is not zero."""
-    if not env_var or env_var == "0x0000000000000000000000000000000000000000":
+    if not var or var == "0x0000000000000000000000000000000000000000":
         print(error_message)
         sys.exit(1)
 

@@ -19,8 +19,8 @@ from .types import (
 from .utils import (
     ensure_env_file,
     format_transaction_logs,
-    validate_env_var,
     validate_order,
+    validate_var,
 )
 
 app = typer.Typer()
@@ -76,7 +76,7 @@ def submit_order(
     ensure_env_file()
 
     vault_address = os.getenv("ORION_VAULT_ADDRESS")
-    validate_env_var(
+    validate_var(
         vault_address,
         error_message=(
             "ORION_VAULT_ADDRESS environment variable is missing or invalid. "

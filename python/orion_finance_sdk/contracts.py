@@ -11,7 +11,7 @@ from web3 import Web3
 from web3.types import TxReceipt
 
 from .types import VaultType
-from .utils import validate_env_var, validate_management_fee, validate_performance_fee
+from .utils import validate_management_fee, validate_performance_fee, validate_var
 
 load_dotenv()
 
@@ -49,11 +49,12 @@ class OrionSmartContract:
     def __init__(self, contract_name: str, contract_address: str):
         """Initialize a smart contract."""
         rpc_url = os.getenv("RPC_URL")
-        validate_env_var(
+        validate_var(
             rpc_url,
             error_message=(
                 "RPC_URL environment variable is missing or invalid. "
                 "Please set RPC_URL in your .env file or as an environment variable. "
+                "Follow the SDK Installation instructions to get one: https://docs.orionfinance.ai/curator/orion_sdk/install"
             ),
         )
 
@@ -178,24 +179,26 @@ class VaultFactory(OrionSmartContract):
         config = OrionConfig()
 
         curator_address = os.getenv("CURATOR_ADDRESS")
-        validate_env_var(
+        validate_var(
             curator_address,
             error_message=(
                 "CURATOR_ADDRESS environment variable is missing or invalid. "
                 "Please set CURATOR_ADDRESS in your .env file or as an environment variable. "
+                "Follow the SDK Installation instructions to get one: https://docs.orionfinance.ai/curator/orion_sdk/install"
             ),
         )
 
         deployer_private_key = os.getenv("VAULT_DEPLOYER_PRIVATE_KEY")
-        validate_env_var(
+        validate_var(
             deployer_private_key,
             error_message=(
                 "VAULT_DEPLOYER_PRIVATE_KEY environment variable is missing or invalid. "
                 "Please set VAULT_DEPLOYER_PRIVATE_KEY in your .env file or as an environment variable. "
+                "Follow the SDK Installation instructions to get one: https://docs.orionfinance.ai/curator/orion_sdk/install"
             ),
         )
         account = self.w3.eth.account.from_key(deployer_private_key)
-        validate_env_var(
+        validate_var(
             account.address,
             error_message="Invalid VAULT_DEPLOYER_PRIVATE_KEY.",
         )
@@ -266,7 +269,7 @@ class OrionTransparentVault(OrionSmartContract):
     def __init__(self):
         """Initialize the OrionTransparentVault contract."""
         contract_address = os.getenv("ORION_VAULT_ADDRESS")
-        validate_env_var(
+        validate_var(
             contract_address,
             error_message=(
                 "ORION_VAULT_ADDRESS environment variable is missing or invalid. "
@@ -288,11 +291,12 @@ class OrionTransparentVault(OrionSmartContract):
             TransactionResult
         """
         curator_private_key = os.getenv("CURATOR_PRIVATE_KEY")
-        validate_env_var(
+        validate_var(
             curator_private_key,
             error_message=(
                 "CURATOR_PRIVATE_KEY environment variable is missing or invalid. "
                 "Please set CURATOR_PRIVATE_KEY in your .env file or as an environment variable. "
+                "Follow the SDK Installation instructions to get one: https://docs.orionfinance.ai/curator/orion_sdk/install"
             ),
         )
 
@@ -345,7 +349,7 @@ class OrionEncryptedVault(OrionSmartContract):
     def __init__(self):
         """Initialize the OrionEncryptedVault contract."""
         contract_address = os.getenv("ORION_VAULT_ADDRESS")
-        validate_env_var(
+        validate_var(
             contract_address,
             error_message=(
                 "ORION_VAULT_ADDRESS environment variable is missing or invalid. "
@@ -369,11 +373,12 @@ class OrionEncryptedVault(OrionSmartContract):
             TransactionResult
         """
         curator_private_key = os.getenv("CURATOR_PRIVATE_KEY")
-        validate_env_var(
+        validate_var(
             curator_private_key,
             error_message=(
                 "CURATOR_PRIVATE_KEY environment variable is missing or invalid. "
                 "Please set CURATOR_PRIVATE_KEY in your .env file or as an environment variable. "
+                "Follow the SDK Installation instructions to get one: https://docs.orionfinance.ai/curator/orion_sdk/install"
             ),
         )
 
