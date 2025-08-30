@@ -15,14 +15,31 @@ This software is distributed under the BSD-3-Clause license. See the [`LICENSE`]
 
 ## Installation
 
+### From PyPI (Recommended)
+
+Install the latest stable version from PyPI:
+
 ```bash
+pip install orion-finance-sdk
+```
+
+### From Source
+
+For development or to install the latest development version:
+
+```bash
+# Clone the repository
+git clone https://github.com/OrionFinanceAI/orion-finance-sdk.git
+cd orion-finance-sdk
+
+# Using uv (recommended)
 curl -LsSf https://astral.sh/uv/install.sh | sh
 uv venv
 source .venv/bin/activate
 uv pip install -e .
 ```
 
-or, with make:
+Or using make:
 
 ```bash
 make uv-download
@@ -30,6 +47,16 @@ make venv
 source .venv/bin/activate
 make install
 ```
+
+## Environment Variables Setup
+
+The SDK requires the user to specify an `RPC_URL` environment variable in the `.env` file of the project. Follow the [SDK Installation](https://docs.orionfinance.ai/curator/orion_sdk/install) to get one.
+
+Based on the usage, additional environment variables may be required, e.g.:
+- `CURATOR_ADDRESS`: The address of the curator account.
+- `VAULT_DEPLOYER_PRIVATE_KEY`: The private key of the vault deployer account.
+- `CURATOR_PRIVATE_KEY`: The private key of the curator account.
+- `ORION_VAULT_ADDRESS`: The address of the Orion vault.
 
 ## Examples of Usage
 

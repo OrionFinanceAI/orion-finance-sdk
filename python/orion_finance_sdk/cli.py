@@ -16,7 +16,12 @@ from .types import (
     VaultType,
     fee_type_to_int,
 )
-from .utils import format_transaction_logs, validate_env_var, validate_order
+from .utils import (
+    ensure_env_file,
+    format_transaction_logs,
+    validate_order,
+    validate_var,
+)
 
 app = typer.Typer()
 
@@ -33,6 +38,8 @@ def deploy_vault(
     management_fee: int = typer.Option(..., help="Management fee in basis points"),
 ):
     """Deploy an Orion vault with customizable fee structure, name, and symbol. The vault can be either transparent or encrypted."""
+    ensure_env_file()
+
     fee_type = fee_type_to_int[fee_type.value]
 
     vault_factory = VaultFactory(vault_type=vault_type.value)
@@ -66,8 +73,10 @@ def submit_order(
     fuzz: bool = typer.Option(False, help="Fuzz the order intent"),
 ) -> None:
     """Submit an order intent to an Orion vault. The order intent can be either transparent or encrypted."""
+    ensure_env_file()
+
     vault_address = os.getenv("ORION_VAULT_ADDRESS")
-    validate_env_var(
+    validate_var(
         vault_address,
         error_message=(
             "ORION_VAULT_ADDRESS environment variable is missing or invalid. "

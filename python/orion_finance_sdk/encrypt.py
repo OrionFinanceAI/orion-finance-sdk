@@ -6,7 +6,7 @@ import subprocess
 import sys
 from importlib.resources import files
 
-from .utils import validate_env_var
+from .utils import validate_var
 
 
 def encrypt_order_intent(order_intent: dict[str, int]) -> tuple[dict[str, bytes], str]:
@@ -16,19 +16,21 @@ def encrypt_order_intent(order_intent: dict[str, int]) -> tuple[dict[str, bytes]
         sys.exit(1)
 
     curator_address = os.getenv("CURATOR_ADDRESS")
-    validate_env_var(
+    validate_var(
         curator_address,
         error_message=(
             "CURATOR_ADDRESS environment variable is missing or invalid. "
             "Please set CURATOR_ADDRESS in your .env file or as an environment variable. "
+            "Follow the SDK Installation instructions to get one: https://docs.orionfinance.ai/curator/orion_sdk/install"
         ),
     )
     vault_address = os.getenv("ORION_VAULT_ADDRESS")
-    validate_env_var(
+    validate_var(
         vault_address,
         error_message=(
             "ORION_VAULT_ADDRESS environment variable is missing or invalid. "
             "Please set ORION_VAULT_ADDRESS in your .env file or as an environment variable. "
+            "Follow the SDK Installation instructions to get one: https://docs.orionfinance.ai/curator/orion_sdk/install"
         ),
     )
 
