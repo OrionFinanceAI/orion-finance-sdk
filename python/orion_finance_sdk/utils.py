@@ -162,7 +162,7 @@ def format_transaction_logs(
         tx_result: Transaction result object with tx_hash and decoded_logs attributes
         success_message: Custom success message to display at the end
     """
-    print(f"✅ Transaction hash: {tx_result.tx_hash}")
+    print(f"✅ https://sepolia.etherscan.io/tx/0x{tx_result.tx_hash}")
     print("=" * 60)
 
     if tx_result.decoded_logs:
