@@ -36,10 +36,10 @@ def deploy_vault(
     symbol: str = typer.Option(..., help="Symbol of the vault"),
     fee_type: FeeType = typer.Option(..., help="Type of the fee"),
     performance_fee: int = typer.Option(
-        ..., help="Performance fee in percentage i.e 10.2 (maximum 30%)"
+        ..., help="Performance fee in percentage i.e. 10.2 (maximum 30%)"
     ),
     management_fee: int = typer.Option(
-        ..., help="Management fee in percentage i.e 2.1 (maximum 3%)"
+        ..., help="Management fee in percentage i.e. 2.1 (maximum 3%)"
     ),
 ):
     """Deploy an Orion vault with customizable fee structure, name, and symbol. The vault can be either transparent or encrypted."""
@@ -53,8 +53,8 @@ def deploy_vault(
         name=name,
         symbol=symbol,
         fee_type=fee_type,
-        performance_fee=performance_fee * BASIS_POINTS_FACTOR,
-        management_fee=management_fee * BASIS_POINTS_FACTOR,
+        performance_fee=int(performance_fee * BASIS_POINTS_FACTOR),
+        management_fee=int(management_fee * BASIS_POINTS_FACTOR),
     )
 
     # Format transaction logs
