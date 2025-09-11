@@ -1,7 +1,6 @@
 """Test module to verify ABI loading works in installed package."""
 
 import pytest
-
 from orion_finance_sdk.contracts import load_contract_abi
 
 
