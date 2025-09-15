@@ -17,6 +17,7 @@ from .types import (
     fee_type_to_int,
 )
 from .utils import (
+    BASIS_POINTS_FACTOR,
     ensure_env_file,
     format_transaction_logs,
     validate_order,
@@ -34,8 +35,12 @@ def deploy_vault(
     name: str = typer.Option(..., help="Name of the vault"),
     symbol: str = typer.Option(..., help="Symbol of the vault"),
     fee_type: FeeType = typer.Option(..., help="Type of the fee"),
-    performance_fee: int = typer.Option(..., help="Performance fee in basis points"),
-    management_fee: int = typer.Option(..., help="Management fee in basis points"),
+    performance_fee: int = typer.Option(
+        ..., help="Performance fee in percentage i.e. 10.2 (maximum 30%)"
+    ),
+    management_fee: int = typer.Option(
+        ..., help="Management fee in percentage i.e. 2.1 (maximum 3%)"
+    ),
 ):
     """Deploy an Orion vault with customizable fee structure, name, and symbol. The vault can be either transparent or encrypted."""
     ensure_env_file()
@@ -48,8 +53,8 @@ def deploy_vault(
         name=name,
         symbol=symbol,
         fee_type=fee_type,
-        performance_fee=performance_fee,
-        management_fee=management_fee,
+        performance_fee=int(performance_fee * BASIS_POINTS_FACTOR),
+        management_fee=int(management_fee * BASIS_POINTS_FACTOR),
     )
 
     # Format transaction logs
