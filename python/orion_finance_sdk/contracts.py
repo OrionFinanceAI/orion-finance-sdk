@@ -312,6 +312,42 @@ class OrionVault(OrionSmartContract):
             tx_hash=tx_hash_hex, receipt=receipt, decoded_logs=decoded_logs
         )
 
+    def update_fee_model(
+        self, fee_type: int, performance_fee: int, management_fee: int
+    ) -> TransactionResult:
+        """Update the fee model for the vault."""
+        deployer_private_key = os.getenv("VAULT_DEPLOYER_PRIVATE_KEY")
+        validate_var(
+            deployer_private_key,
+            error_message=(
+                "VAULT_DEPLOYER_PRIVATE_KEY environment variable is missing or invalid. "
+                "Please set VAULT_DEPLOYER_PRIVATE_KEY in your .env file or as an environment variable. "
+                "Follow the SDK Installation instructions to get one: https://docs.orionfinance.ai/curator/orion_sdk/install"
+            ),
+        )
+
+        account = self.w3.eth.account.from_key(deployer_private_key)
+        nonce = self.w3.eth.get_transaction_count(account.address)
+
+        tx = self.contract.functions.updateFeeModel(
+            fee_type, performance_fee, management_fee
+        ).build_transaction({"from": account.address, "nonce": nonce})
+
+        signed = account.sign_transaction(tx)
+        tx_hash = self.w3.eth.send_raw_transaction(signed.raw_transaction)
+        tx_hash_hex = tx_hash.hex()
+
+        receipt = self._wait_for_transaction_receipt(tx_hash_hex)
+
+        if receipt["status"] != 1:
+            raise Exception(f"Transaction failed with status: {receipt['status']}")
+
+        decoded_logs = self._decode_logs(receipt)
+
+        return TransactionResult(
+            tx_hash=tx_hash_hex, receipt=receipt, decoded_logs=decoded_logs
+        )
+
 
 class OrionTransparentVault(OrionVault):
     """OrionTransparentVault contract."""

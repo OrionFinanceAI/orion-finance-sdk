@@ -95,3 +95,9 @@ orion submit-order --order-intent-path order_intent.json
 ```bash
 orion update-curator --new-curator-address 0x92Cc2706b5775e2E783D76F20dC7ccC59bB92E48
 ```
+
+### Update the fee model for a vault
+
+```bash
+orion update-fee-model --fee-type high_water_mark --performance-fee 5.5 --management-fee 0.1
+```
