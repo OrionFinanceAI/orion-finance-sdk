@@ -89,3 +89,9 @@ echo '{"0x3E15268AdE04Eb579EE490CA92736301C7D644Bb": 0.4, "0x4371227723a006e8ee3
 # Submit the order intent to the Orion vault
 orion submit-order --order-intent-path order_intent.json
 ```
+
+### Update the curator address for a vault
+
+```bash
+orion update-curator --new-curator-address 0x92Cc2706b5775e2E783D76F20dC7ccC59bB92E48
+```

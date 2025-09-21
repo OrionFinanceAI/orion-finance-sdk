@@ -115,3 +115,28 @@ def submit_order(
         raise ValueError(f"Vault address {vault_address} not in OrionConfig contract.")
 
     format_transaction_logs(tx_result, "Order intent submitted successfully!")
+
+
+@app.command()
+def update_curator(
+    new_curator_address: str = typer.Option(
+        ..., help="New curator address to set for the vault"
+    ),
+) -> None:
+    """Update the curator address for an Orion vault."""
+    ensure_env_file()
+
+    vault_address = os.getenv("ORION_VAULT_ADDRESS")
+    validate_var(
+        vault_address,
+        error_message=(
+            "ORION_VAULT_ADDRESS environment variable is missing or invalid. "
+            "Please set ORION_VAULT_ADDRESS in your .env file or as an environment variable. "
+        ),
+    )
+
+    # Working for both vaults types
+    vault = OrionTransparentVault()
+
+    tx_result = vault.update_curator(new_curator_address)
+    format_transaction_logs(tx_result, "Curator address updated successfully!")

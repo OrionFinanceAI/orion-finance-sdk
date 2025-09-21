@@ -263,11 +263,11 @@ class VaultFactory(OrionSmartContract):
         return None
 
 
-class OrionTransparentVault(OrionSmartContract):
-    """OrionTransparentVault contract."""
+class OrionVault(OrionSmartContract):
+    """OrionVault contract."""
 
-    def __init__(self):
-        """Initialize the OrionTransparentVault contract."""
+    def __init__(self, contract_name: str):
+        """Initialize the OrionVault contract."""
         contract_address = os.getenv("ORION_VAULT_ADDRESS")
         validate_var(
             contract_address,
@@ -276,7 +276,49 @@ class OrionTransparentVault(OrionSmartContract):
                 "Please set ORION_VAULT_ADDRESS in your .env file or as an environment variable. "
             ),
         )
-        super().__init__("OrionTransparentVault", contract_address)
+        super().__init__(contract_name, contract_address)
+
+    def update_curator(self, new_curator_address: str) -> TransactionResult:
+        """Update the curator address for the vault."""
+        deployer_private_key = os.getenv("VAULT_DEPLOYER_PRIVATE_KEY")
+        validate_var(
+            deployer_private_key,
+            error_message=(
+                "VAULT_DEPLOYER_PRIVATE_KEY environment variable is missing or invalid. "
+                "Please set VAULT_DEPLOYER_PRIVATE_KEY in your .env file or as an environment variable. "
+                "Follow the SDK Installation instructions to get one: https://docs.orionfinance.ai/curator/orion_sdk/install"
+            ),
+        )
+
+        account = self.w3.eth.account.from_key(deployer_private_key)
+        nonce = self.w3.eth.get_transaction_count(account.address)
+
+        tx = self.contract.functions.updateCurator(
+            new_curator_address
+        ).build_transaction({"from": account.address, "nonce": nonce})
+
+        signed = account.sign_transaction(tx)
+        tx_hash = self.w3.eth.send_raw_transaction(signed.raw_transaction)
+        tx_hash_hex = tx_hash.hex()
+
+        receipt = self._wait_for_transaction_receipt(tx_hash_hex)
+
+        if receipt["status"] != 1:
+            raise Exception(f"Transaction failed with status: {receipt['status']}")
+
+        decoded_logs = self._decode_logs(receipt)
+
+        return TransactionResult(
+            tx_hash=tx_hash_hex, receipt=receipt, decoded_logs=decoded_logs
+        )
+
+
+class OrionTransparentVault(OrionVault):
+    """OrionTransparentVault contract."""
+
+    def __init__(self):
+        """Initialize the OrionTransparentVault contract."""
+        super().__init__("OrionTransparentVault")
 
     def submit_order_intent(
         self,
@@ -326,7 +368,6 @@ class OrionTransparentVault(OrionSmartContract):
         )
 
         signed = account.sign_transaction(tx)
-        # TODO: use tenacity to retry transaction if it fails with TimeExhausted is not in the chain after 120 seconds. True for all "send_raw_transaction" calls.
         tx_hash = self.w3.eth.send_raw_transaction(signed.raw_transaction)
         tx_hash_hex = tx_hash.hex()
 
@@ -343,20 +384,12 @@ class OrionTransparentVault(OrionSmartContract):
 
 
 # TODO: Consider having a single class for both transparent and encrypted vaults.
-class OrionEncryptedVault(OrionSmartContract):
+class OrionEncryptedVault(OrionVault):
     """OrionEncryptedVault contract."""
 
     def __init__(self):
         """Initialize the OrionEncryptedVault contract."""
-        contract_address = os.getenv("ORION_VAULT_ADDRESS")
-        validate_var(
-            contract_address,
-            error_message=(
-                "ORION_VAULT_ADDRESS environment variable is missing or invalid. "
-                "Please set ORION_VAULT_ADDRESS in your .env file or as an environment variable. "
-            ),
-        )
-        super().__init__("OrionEncryptedVault", contract_address)
+        super().__init__("OrionEncryptedVault")
 
     def submit_order_intent(
         self,
@@ -408,7 +441,6 @@ class OrionEncryptedVault(OrionSmartContract):
         )
 
         signed = account.sign_transaction(tx)
-        # TODO: use tenacity to retry transaction if it fails with TimeExhausted is not in the chain after 120 seconds. True for all "send_raw_transaction" calls.
         tx_hash = self.w3.eth.send_raw_transaction(signed.raw_transaction)
         tx_hash_hex = tx_hash.hex()
 
