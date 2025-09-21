@@ -35,10 +35,10 @@ def deploy_vault(
     name: str = typer.Option(..., help="Name of the vault"),
     symbol: str = typer.Option(..., help="Symbol of the vault"),
     fee_type: FeeType = typer.Option(..., help="Type of the fee"),
-    performance_fee: int = typer.Option(
+    performance_fee: float = typer.Option(
         ..., help="Performance fee in percentage i.e. 10.2 (maximum 30%)"
     ),
-    management_fee: int = typer.Option(
+    management_fee: float = typer.Option(
         ..., help="Management fee in percentage i.e. 2.1 (maximum 3%)"
     ),
 ):
@@ -115,3 +115,63 @@ def submit_order(
         raise ValueError(f"Vault address {vault_address} not in OrionConfig contract.")
 
     format_transaction_logs(tx_result, "Order intent submitted successfully!")
+
+
+@app.command()
+def update_curator(
+    new_curator_address: str = typer.Option(
+        ..., help="New curator address to set for the vault"
+    ),
+) -> None:
+    """Update the curator address for an Orion vault."""
+    ensure_env_file()
+
+    vault_address = os.getenv("ORION_VAULT_ADDRESS")
+    validate_var(
+        vault_address,
+        error_message=(
+            "ORION_VAULT_ADDRESS environment variable is missing or invalid. "
+            "Please set ORION_VAULT_ADDRESS in your .env file or as an environment variable. "
+        ),
+    )
+
+    # Working for both vaults types
+    vault = OrionTransparentVault()
+
+    tx_result = vault.update_curator(new_curator_address)
+    format_transaction_logs(tx_result, "Curator address updated successfully!")
+
+
+@app.command()
+def update_fee_model(
+    fee_type: FeeType = typer.Option(..., help="Type of the fee"),
+    performance_fee: float = typer.Option(
+        ..., help="Performance fee in percentage i.e. 10.2 (maximum 30%)"
+    ),
+    management_fee: float = typer.Option(
+        ..., help="Management fee in percentage i.e. 2.1 (maximum 3%)"
+    ),
+) -> None:
+    """Update the fee model for an Orion vault."""
+    ensure_env_file()
+
+    fee_type = fee_type_to_int[fee_type.value]
+
+    vault_address = os.getenv("ORION_VAULT_ADDRESS")
+    validate_var(
+        vault_address,
+        error_message=(
+            "ORION_VAULT_ADDRESS environment variable is missing or invalid. "
+            "Please set ORION_VAULT_ADDRESS in your .env file or as an environment variable. "
+        ),
+    )
+
+    # Working for both vaults types
+    vault = OrionTransparentVault()
+
+    tx_result = vault.update_fee_model(
+        fee_type=fee_type,
+        performance_fee=int(performance_fee * BASIS_POINTS_FACTOR),
+        management_fee=int(management_fee * BASIS_POINTS_FACTOR),
+    )
+    format_transaction_logs(tx_result, "Fee model updated successfully!")

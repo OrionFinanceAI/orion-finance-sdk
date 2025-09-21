@@ -18,7 +18,7 @@ async function main() {
   );
 
   for (const value of values) {
-    encryptedBuffer.add32(value);
+    encryptedBuffer.add128(value);
   }
 
   // Encrypt intent values

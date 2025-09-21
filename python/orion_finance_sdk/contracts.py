@@ -111,7 +111,7 @@ class OrionConfig(OrionSmartContract):
 
     def __init__(self):
         """Initialize the OrionConfig contract."""
-        contract_address = "0xE4F0e2b653d81F39e6bF774D2b8BBdEBED8c8A92"
+        contract_address = "0x8eD5Fb264A049b18B98e8403e01146Ee78C1e984"
         super().__init__(
             contract_name="OrionConfig",
             contract_address=contract_address,
@@ -158,9 +158,9 @@ class VaultFactory(OrionSmartContract):
     ):
         """Initialize the VaultFactory contract."""
         if vault_type == VaultType.TRANSPARENT:
-            contract_address = "0x53622EF72745A9F8331bFF896D6e2C11be16c76c"
+            contract_address = "0x5689219Aa5dC2766928d316E719AaE25047314e4"
         elif vault_type == VaultType.ENCRYPTED:
-            contract_address = "0x349BF8E3EF47f0f4Ec7342aA16c1e282b45DAD17"
+            contract_address = "0xdD7900c4B6abfEB4D2Cb9F233d875071f6e1093F"
 
         super().__init__(
             contract_name=f"{vault_type.capitalize()}VaultFactory",
@@ -263,11 +263,11 @@ class VaultFactory(OrionSmartContract):
         return None
 
 
-class OrionTransparentVault(OrionSmartContract):
-    """OrionTransparentVault contract."""
+class OrionVault(OrionSmartContract):
+    """OrionVault contract."""
 
-    def __init__(self):
-        """Initialize the OrionTransparentVault contract."""
+    def __init__(self, contract_name: str):
+        """Initialize the OrionVault contract."""
         contract_address = os.getenv("ORION_VAULT_ADDRESS")
         validate_var(
             contract_address,
@@ -276,7 +276,85 @@ class OrionTransparentVault(OrionSmartContract):
                 "Please set ORION_VAULT_ADDRESS in your .env file or as an environment variable. "
             ),
         )
-        super().__init__("OrionTransparentVault", contract_address)
+        super().__init__(contract_name, contract_address)
+
+    def update_curator(self, new_curator_address: str) -> TransactionResult:
+        """Update the curator address for the vault."""
+        deployer_private_key = os.getenv("VAULT_DEPLOYER_PRIVATE_KEY")
+        validate_var(
+            deployer_private_key,
+            error_message=(
+                "VAULT_DEPLOYER_PRIVATE_KEY environment variable is missing or invalid. "
+                "Please set VAULT_DEPLOYER_PRIVATE_KEY in your .env file or as an environment variable. "
+                "Follow the SDK Installation instructions to get one: https://docs.orionfinance.ai/curator/orion_sdk/install"
+            ),
+        )
+
+        account = self.w3.eth.account.from_key(deployer_private_key)
+        nonce = self.w3.eth.get_transaction_count(account.address)
+
+        tx = self.contract.functions.updateCurator(
+            new_curator_address
+        ).build_transaction({"from": account.address, "nonce": nonce})
+
+        signed = account.sign_transaction(tx)
+        tx_hash = self.w3.eth.send_raw_transaction(signed.raw_transaction)
+        tx_hash_hex = tx_hash.hex()
+
+        receipt = self._wait_for_transaction_receipt(tx_hash_hex)
+
+        if receipt["status"] != 1:
+            raise Exception(f"Transaction failed with status: {receipt['status']}")
+
+        decoded_logs = self._decode_logs(receipt)
+
+        return TransactionResult(
+            tx_hash=tx_hash_hex, receipt=receipt, decoded_logs=decoded_logs
+        )
+
+    def update_fee_model(
+        self, fee_type: int, performance_fee: int, management_fee: int
+    ) -> TransactionResult:
+        """Update the fee model for the vault."""
+        deployer_private_key = os.getenv("VAULT_DEPLOYER_PRIVATE_KEY")
+        validate_var(
+            deployer_private_key,
+            error_message=(
+                "VAULT_DEPLOYER_PRIVATE_KEY environment variable is missing or invalid. "
+                "Please set VAULT_DEPLOYER_PRIVATE_KEY in your .env file or as an environment variable. "
+                "Follow the SDK Installation instructions to get one: https://docs.orionfinance.ai/curator/orion_sdk/install"
+            ),
+        )
+
+        account = self.w3.eth.account.from_key(deployer_private_key)
+        nonce = self.w3.eth.get_transaction_count(account.address)
+
+        tx = self.contract.functions.updateFeeModel(
+            fee_type, performance_fee, management_fee
+        ).build_transaction({"from": account.address, "nonce": nonce})
+
+        signed = account.sign_transaction(tx)
+        tx_hash = self.w3.eth.send_raw_transaction(signed.raw_transaction)
+        tx_hash_hex = tx_hash.hex()
+
+        receipt = self._wait_for_transaction_receipt(tx_hash_hex)
+
+        if receipt["status"] != 1:
+            raise Exception(f"Transaction failed with status: {receipt['status']}")
+
+        decoded_logs = self._decode_logs(receipt)
+
+        return TransactionResult(
+            tx_hash=tx_hash_hex, receipt=receipt, decoded_logs=decoded_logs
+        )
+
+
+class OrionTransparentVault(OrionVault):
+    """OrionTransparentVault contract."""
+
+    def __init__(self):
+        """Initialize the OrionTransparentVault contract."""
+        super().__init__("OrionTransparentVault")
 
     def submit_order_intent(
         self,
@@ -326,7 +404,6 @@ class OrionTransparentVault(OrionSmartContract):
         )
 
         signed = account.sign_transaction(tx)
-        # TODO: use tenacity to retry transaction if it fails with TimeExhausted is not in the chain after 120 seconds. True for all "send_raw_transaction" calls.
         tx_hash = self.w3.eth.send_raw_transaction(signed.raw_transaction)
         tx_hash_hex = tx_hash.hex()
 
@@ -343,20 +420,12 @@ class OrionTransparentVault(OrionSmartContract):
 
 
 # TODO: Consider having a single class for both transparent and encrypted vaults.
-class OrionEncryptedVault(OrionSmartContract):
+class OrionEncryptedVault(OrionVault):
     """OrionEncryptedVault contract."""
 
     def __init__(self):
         """Initialize the OrionEncryptedVault contract."""
-        contract_address = os.getenv("ORION_VAULT_ADDRESS")
-        validate_var(
-            contract_address,
-            error_message=(
-                "ORION_VAULT_ADDRESS environment variable is missing or invalid. "
-                "Please set ORION_VAULT_ADDRESS in your .env file or as an environment variable. "
-            ),
-        )
-        super().__init__("OrionEncryptedVault", contract_address)
+        super().__init__("OrionEncryptedVault")
 
     def submit_order_intent(
         self,
@@ -408,7 +477,6 @@ class OrionEncryptedVault(OrionSmartContract):
         )
 
         signed = account.sign_transaction(tx)
-        # TODO: use tenacity to retry transaction if it fails with TimeExhausted is not in the chain after 120 seconds. True for all "send_raw_transaction" calls.
         tx_hash = self.w3.eth.send_raw_transaction(signed.raw_transaction)
         tx_hash_hex = tx_hash.hex()
 
