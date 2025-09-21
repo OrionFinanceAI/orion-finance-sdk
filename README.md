@@ -77,14 +77,14 @@ orion deploy-vault --vault-type transparent --name "Algorithmic Liquidity Provis
 ### Deploy a new Encrypted Orion vault
 
 ```bash
-orion deploy-vault --vault-type encrypted --name "Quantitative Uncertainty Analysis of Network Topologies" --symbol "QUANT" --fee-type high_water_mark --performance-fee 0 --management-fee 2
+orion deploy-vault --vault-type encrypted --name "Fully Homomorphic Encryption for Vault Management" --symbol "FHEVM" --fee-type high_water_mark --performance-fee 0 --management-fee 2
 ```
 
 ### Submit an order intent to a vault
 
 ```bash
 # Use off-chain stack to generate an order intent
-echo '{"0x5BA134aBc8BA11Cf7868F4Dfb02497A3f1544Eb5": 0.25, "0x490a81a1939762E6AA87C68C346A0be5E21B466c": 0.02, "0x8A359aAfbf0DF440B34bb97445d981C1944CD053": 0.015, "0xbD39EeAd46c3f28EB8309A74641ab9Ef947FFc83": 0.0255, "0x6b2741F97Ea3EA9C5bFeEa33575d1E73c4481010": 0.06, "0x58f7aaE7B2c017F74B7403C9e89537f43B13bE87": 0.40, "0x28345814d210f2FE11C8de03236f0Ba7b603D282": 0.22, "0x484fF4FB5Ca053b47e5e0490C363b5ea38bB2adF": 0.0095}' > order_intent.json
+echo '{"0x3E15268AdE04Eb579EE490CA92736301C7D644Bb": 0.4, "0x4371227723a006e8ee3941AfF5018D084a06DB95": 0.2, "0x784C3AB4C7bdC2d219b902fA63e87b376F178d82": 0.15, "0xD06b768D498FFD3151e4Bc89e0dBdAA0d1413044": 0.15, "0x1904c298d44b6cd10003C843e29D51407fE1309f": 0.1}' > order_intent.json
 
 # Submit the order intent to the Orion vault
 orion submit-order --order-intent-path order_intent.json
