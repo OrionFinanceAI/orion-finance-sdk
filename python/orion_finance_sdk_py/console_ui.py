@@ -17,6 +17,7 @@ from rich.spinner import Spinner
 from rich.table import Table
 from rich.text import Text
 
+from .orion_config_env import write_rpc_env_name
 from .types import CHAIN_CONFIG, ZERO_ADDRESS
 
 # Status and chrome go to stderr so stdout stays pipe-friendly where needed.
@@ -151,9 +152,10 @@ def _chain_label() -> str:
 def session_readiness_hints() -> list[str]:
     """Return non-blocking warnings for missing RPC / OrionConfig on the active chain."""
     hints: list[str] = []
-    if not (os.getenv("RPC_URL") or "").strip():
-        hints.append("RPC_URL not set")
     chain_id = int(os.getenv("CHAIN_ID", "11155111"))
+    rpc_name = write_rpc_env_name(chain_id)
+    if not (os.getenv(rpc_name) or "").strip():
+        hints.append(f"{rpc_name} not set")
     cfg_name = (
         "MAINNET_ORION_CONFIG_ADDRESS" if chain_id == 1 else "SEPOLIA_ORION_CONFIG_ADDRESS"
     )

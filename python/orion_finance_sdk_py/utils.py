@@ -31,10 +31,8 @@ def ensure_env_file(env_file_path: Path = Path.cwd() / ".env"):
         # Create .env file with template
         env_template = """# Orion Finance SDK Environment Variables
 
-# RPC URL for the active chain (must match --chain / CHAIN / CHAIN_ID)
-RPC_URL=
-
-# Optional RPC for execution cost estimates (public mainnet RPCs if unset)
+# Chain-scoped RPC only (no bare RPC_URL). Must match --chain / CHAIN / CHAIN_ID.
+SEPOLIA_RPC_URL=
 # MAINNET_RPC_URL=
 
 # Chain selection (default sepolia). Prefer CHAIN=sepolia|mainnet; CHAIN_ID also works.

@@ -63,6 +63,34 @@ def apply_chain_selection(chain_cli: str | None = None) -> int:
     return chain_id
 
 
+def write_rpc_env_name(
+    chain_id: int | None = None,
+    env: Mapping[str, str] | None = None,
+) -> str:
+    """Env var for the write/keeper RPC on the active chain. No bare ``RPC_URL``."""
+    source: Mapping[str, str | None] = env if env is not None else os.environ
+    if chain_id is None:
+        chain_id = resolve_active_chain_id(env=source)
+    return "MAINNET_RPC_URL" if chain_id == MAINNET_CHAIN_ID else "SEPOLIA_RPC_URL"
+
+
+def resolve_configured_write_rpc_url(
+    chain_id: int | None = None,
+    env: Mapping[str, str] | None = None,
+) -> str | None:
+    """Return chain-scoped RPC from env, or ``None`` if unset.
+
+    Ignores bare ``RPC_URL``. Mainnet → ``MAINNET_RPC_URL``; everything else
+    (Sepolia / local forks) → ``SEPOLIA_RPC_URL``.
+    """
+    source: Mapping[str, str | None] = env if env is not None else os.environ
+    if chain_id is None:
+        chain_id = resolve_active_chain_id(env=source)
+    name = write_rpc_env_name(chain_id, source)
+    raw = (source.get(name) or "").strip()
+    return raw or None
+
+
 def resolve_orion_config_address(
     chain_id: int | None = None,
     env: Mapping[str, str] | None = None,

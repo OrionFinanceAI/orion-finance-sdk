@@ -60,7 +60,7 @@ jobs:
 
       - name: Run tests
         env:
-          # Fork tests skip unless ALCHEMY_API_KEY or RPC_URL is set
+          # Fork tests skip unless ALCHEMY_API_KEY or SEPOLIA_RPC_URL is set
           ALCHEMY_API_KEY: ${{ secrets.WEB3_ALCHEMY_API_KEY }}
           WEB3_ALCHEMY_API_KEY: ${{ secrets.WEB3_ALCHEMY_API_KEY }}
           WEB3_ETHEREUM_SEPOLIA_ALCHEMY_API_KEY: ${{ secrets.WEB3_ALCHEMY_API_KEY }}

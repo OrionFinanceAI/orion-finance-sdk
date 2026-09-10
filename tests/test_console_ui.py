@@ -118,7 +118,7 @@ def test_print_confirm_warning(capture_console):
 
 
 def test_print_session_bar_without_vault(capture_console):
-    env = {"CHAIN_ID": "11155111", "ORION_VAULT_ADDRESS": "", "RPC_URL": ""}
+    env = {"CHAIN_ID": "11155111", "ORION_VAULT_ADDRESS": "", "SEPOLIA_RPC_URL": ""}
     with patch.dict("os.environ", env, clear=False):
         # Clear OrionConfig so readiness hints show.
         os.environ.pop("SEPOLIA_ORION_CONFIG_ADDRESS", None)
@@ -127,7 +127,7 @@ def test_print_session_bar_without_vault(capture_console):
     assert "Orion Console" in out
     assert "Sepolia" in out
     assert "not set" in out
-    assert "RPC_URL not set" in out
+    assert "SEPOLIA_RPC_URL not set" in out
     assert "SEPOLIA_ORION_CONFIG_ADDRESS not set" in out
 
 

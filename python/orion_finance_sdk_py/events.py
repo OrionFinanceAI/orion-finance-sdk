@@ -78,7 +78,8 @@ def get_lp_events(
     """Fetch historical LP queue events for a vault via ``eth_getLogs``.
 
     Consumers can reconcile per-user pending amounts locally from these events.
-    Public RPCs may rate-limit large ranges — prefer a dedicated ``RPC_URL``.
+    Public RPCs may rate-limit large ranges — prefer a dedicated ``SEPOLIA_RPC_URL`` /
+    ``MAINNET_RPC_URL``.
     """
     names = event_names or _LP_EVENT_NAMES
     vault = checksum_address(vault_address)

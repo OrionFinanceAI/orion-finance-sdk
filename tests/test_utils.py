@@ -53,12 +53,12 @@ def test_upsert_dotenv_key_creates_and_replaces(tmp_path):
     upsert_dotenv_key(env_file, "CHAIN", "sepolia")
     assert "CHAIN=sepolia" in env_file.read_text()
 
-    env_file.write_text("#CHAIN=sepolia\nRPC_URL=http://x\n")
+    env_file.write_text("#CHAIN=sepolia\nSEPOLIA_RPC_URL=http://x\n")
     upsert_dotenv_key(env_file, "CHAIN", "mainnet")
     text = env_file.read_text()
     assert "CHAIN=mainnet" in text
     assert "#CHAIN=sepolia" not in text
-    assert "RPC_URL=http://x" in text
+    assert "SEPOLIA_RPC_URL=http://x" in text
 
 
 def test_validate_var():
