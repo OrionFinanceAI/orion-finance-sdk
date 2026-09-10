@@ -31,6 +31,9 @@ def mock_w3():
     with (
         patch("orion_finance_sdk_py.contracts.Web3") as MockWeb3,
         patch("orion_finance_sdk_py.contracts.make_http_provider") as mock_provider,
+        patch(
+            "orion_finance_sdk_py.contracts.checksum_address", side_effect=lambda x: x
+        ),
     ):
         mock_provider.return_value = MagicMock()
 
@@ -107,6 +110,7 @@ def mock_env():
         "LP_PRIVATE_KEY": "0xPrivate",
         "CURATOR_PRIVATE_KEY": "0xPrivate",
         "ORION_VAULT_ADDRESS": "0xVault",
+        "SEPOLIA_ORION_CONFIG_ADDRESS": "0xbDe3025d08681a02a1c6cf70375baBe2152DD06f",
     }
     with patch.dict(os.environ, env_vars):
         yield
@@ -389,19 +393,20 @@ class TestOrionConfig:
         assert config.price_adapter_decimals == 8
 
     @pytest.mark.usefixtures("mock_w3", "mock_load_abi")
-    def test_init_invalid_chain(self):
-        """Test init with invalid chain ID (chain 1 not in CHAIN_CONFIG)."""
-        # Force address from CHAIN_ID so we hit the "unsupported chain" path
+    def test_init_mainnet_requires_mainnet_env(self):
+        """CHAIN_ID=1 reads MAINNET_* only; SEPOLIA_* and ORION_CONFIG_ADDRESS are ignored."""
         with patch.dict(
             os.environ,
             {
                 "CHAIN_ID": "1",
                 "RPC_URL": "http://localhost",
-                "ORION_CONFIG_ADDRESS": "",  # unset so OrionConfig uses CHAIN_ID
+                "SEPOLIA_ORION_CONFIG_ADDRESS": "0xbDe3025d08681a02a1c6cf70375baBe2152DD06f",
+                "ORION_CONFIG_ADDRESS": "0xbDe3025d08681a02a1c6cf70375baBe2152DD06f",
+                "MAINNET_ORION_CONFIG_ADDRESS": "",
             },
             clear=False,
         ):
-            with pytest.raises(ValueError, match="Unsupported CHAIN_ID"):
+            with pytest.raises(ValueError, match="MAINNET_ORION_CONFIG_ADDRESS is required"):
                 OrionConfig()
 
     @pytest.mark.usefixtures("mock_w3", "mock_load_abi")
@@ -1030,6 +1035,9 @@ class TestOrionVaults:
             mock_fn.return_value.call.return_value = True
             assert vault.can_request_deposit("0xUser") is True
             mock_fn.assert_called_with("0xUser", b"")
+            mock_fn.return_value.call.assert_called_with(
+                {"from": vault.contract_address}
+            )
             mock_fn.return_value.call.return_value = False
             assert vault.can_request_deposit("0xUser") is False
             mock_fn.assert_called_with("0xUser", b"")
@@ -1581,6 +1589,9 @@ class TestOrionVaults:
             mock_fn.return_value.call.return_value = True
             assert vault.can_hold_shares("0xUser") is True
             mock_fn.assert_called_with("0xUser")
+            mock_fn.return_value.call.assert_called_with(
+                {"from": vault.contract_address}
+            )
 
         vault.contract.functions.transferAccessControl().call.return_value = (
             "0xTransferAcl"
@@ -1590,6 +1601,9 @@ class TestOrionVaults:
             mock_fn.return_value.call.return_value = False
             assert vault.can_transfer_shares("0xUser") is False
             mock_fn.assert_called_with("0xUser", b"")
+            mock_fn.return_value.call.assert_called_with(
+                {"from": vault.contract_address}
+            )
 
     @patch("orion_finance_sdk_py.contracts.OrionConfig")
     @pytest.mark.usefixtures("mock_w3", "mock_load_abi", "mock_env")

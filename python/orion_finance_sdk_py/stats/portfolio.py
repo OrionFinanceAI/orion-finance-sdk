@@ -1,13 +1,14 @@
-"""Thin skfolio MeanRisk helpers for research notebooks.
+"""Thin skfolio helpers for research notebooks.
 
-Not a sklearn Pipeline. Weights are labeled Series. Annualization defaults to
-365. Zero-variance assets are dropped before fitting, as in the universe
-notebook.
+Users compose any skfolio/sklearn estimator before fit. Orion only prepares
+returns (overlap + drop zero-variance) and wraps labeled weights. Annualization
+defaults to 365. Not a sklearn Pipeline.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Protocol, runtime_checkable
 
 import pandas as pd
 from skfolio import RiskMeasure
@@ -18,16 +19,29 @@ from orion_finance_sdk_py.stats.rfr import daily_rfr
 from orion_finance_sdk_py.stats.series import ReturnSeries
 
 
+@runtime_checkable
+class PortfolioEstimator(Protocol):
+    """Minimal skfolio/sklearn surface used by Orion (weights_ appear after fit)."""
+
+    def fit(self, X: pd.DataFrame, y: object = None, **kwargs: object) -> object:
+        """Fit the estimator to the provided data."""
+        ...
+
+    def predict(self, X: pd.DataFrame) -> object:
+        """Predict using the fitted estimator on the provided data."""
+        ...
+
+
 @dataclass
 class FittedPortfolio:
-    """Labeled MeanRisk weights plus the fitted skfolio estimator."""
+    """Labeled portfolio weights plus the fitted estimator."""
 
     weights: pd.Series
-    model: MeanRisk
+    model: PortfolioEstimator
     dropped: tuple[str, ...]
 
     def predict(self, returns: pd.DataFrame) -> object:
-        """Predict an out-of-sample skfolio Portfolio on the kept columns."""
+        """Predict an out-of-sample portfolio on the kept columns."""
         kept = [name for name in self.weights.index if name in returns.columns]
         return self.model.predict(returns.loc[:, kept])
 
@@ -66,25 +80,71 @@ def drop_zero_variance(
     return returns, dropped
 
 
-def _fit_mean_risk(
-    returns: pd.DataFrame,
-    model: MeanRisk,
-    dropped: tuple[str, ...],
+def prepare_returns(
+    returns: ReturnSeries | pd.DataFrame,
+) -> tuple[pd.DataFrame, tuple[str, ...]]:
+    """Overlap complete rows and drop flat assets before fitting."""
+    overlap = _as_frame(returns).dropna(how="any")
+    return drop_zero_variance(overlap)
+
+
+def fit_estimator(
+    returns: ReturnSeries | pd.DataFrame,
+    model: PortfolioEstimator,
 ) -> FittedPortfolio:
-    """Fit ``model`` and wrap labeled weights."""
-    if returns.shape[1] < 2 or returns.shape[0] < 2:
-        raise ValueError("MeanRisk needs at least 2 assets and 2 observations")
-    model.fit(returns)
-    weights = pd.Series(model.weights_, index=returns.columns, dtype=float)
+    """Prepare returns, fit ``model``, and return labeled weights."""
+    frame, dropped = prepare_returns(returns)
+    if frame.shape[1] < 2 or frame.shape[0] < 2:
+        raise ValueError("Estimator needs at least 2 assets and 2 observations")
+    model.fit(frame)
+    weights_raw = getattr(model, "weights_", None)
+    if weights_raw is None:
+        raise ValueError("Estimator must expose weights_ after fit")
+    weights = pd.Series(weights_raw, index=frame.columns, dtype=float)
     return FittedPortfolio(weights=weights, model=model, dropped=dropped)
 
 
-def _prepare(
-    returns: ReturnSeries | pd.DataFrame,
-) -> tuple[pd.DataFrame, tuple[str, ...]]:
-    """Overlap rows and drop flat assets."""
-    overlap = _as_frame(returns).dropna(how="any")
-    return drop_zero_variance(overlap)
+def min_variance_model(
+    *,
+    rfr: float = 0.0,
+    periods_per_year: int = DEFAULT_PERIODS_PER_YEAR,
+) -> MeanRisk:
+    """Unfitted long-only minimum-variance ``MeanRisk`` with Orion defaults."""
+    rf_period = daily_rfr(rfr, periods_per_year=periods_per_year)
+    return MeanRisk(
+        risk_free_rate=rf_period,
+        portfolio_params={"annualized_factor": float(periods_per_year)},
+    )
+
+
+def max_sortino_model(
+    *,
+    rfr: float = 0.0,
+    periods_per_year: int = DEFAULT_PERIODS_PER_YEAR,
+) -> MeanRisk:
+    """Unfitted max-Sortino ``MeanRisk`` with Orion defaults."""
+    rf_period = daily_rfr(rfr, periods_per_year=periods_per_year)
+    return MeanRisk(
+        objective_function=ObjectiveFunction.MAXIMIZE_RATIO,
+        risk_measure=RiskMeasure.SEMI_VARIANCE,
+        risk_free_rate=rf_period,
+        portfolio_params={"annualized_factor": float(periods_per_year)},
+    )
+
+
+def max_sharpe_model(
+    *,
+    rfr: float = 0.0,
+    periods_per_year: int = DEFAULT_PERIODS_PER_YEAR,
+) -> MeanRisk:
+    """Unfitted max-Sharpe ``MeanRisk`` with Orion defaults."""
+    rf_period = daily_rfr(rfr, periods_per_year=periods_per_year)
+    return MeanRisk(
+        objective_function=ObjectiveFunction.MAXIMIZE_RATIO,
+        risk_measure=RiskMeasure.VARIANCE,
+        risk_free_rate=rf_period,
+        portfolio_params={"annualized_factor": float(periods_per_year)},
+    )
 
 
 def min_variance(
@@ -94,13 +154,9 @@ def min_variance(
     periods_per_year: int = DEFAULT_PERIODS_PER_YEAR,
 ) -> FittedPortfolio:
     """Minimum-variance long-only portfolio (skfolio ``MeanRisk`` default)."""
-    frame, dropped = _prepare(returns)
-    rf_period = daily_rfr(rfr, periods_per_year=periods_per_year)
-    model = MeanRisk(
-        risk_free_rate=rf_period,
-        portfolio_params={"annualized_factor": float(periods_per_year)},
+    return fit_estimator(
+        returns, min_variance_model(rfr=rfr, periods_per_year=periods_per_year)
     )
-    return _fit_mean_risk(frame, model, dropped)
 
 
 def max_sortino(
@@ -110,15 +166,9 @@ def max_sortino(
     periods_per_year: int = DEFAULT_PERIODS_PER_YEAR,
 ) -> FittedPortfolio:
     """Maximize Sortino ratio (mean / semi-deviation)."""
-    frame, dropped = _prepare(returns)
-    rf_period = daily_rfr(rfr, periods_per_year=periods_per_year)
-    model = MeanRisk(
-        objective_function=ObjectiveFunction.MAXIMIZE_RATIO,
-        risk_measure=RiskMeasure.SEMI_VARIANCE,
-        risk_free_rate=rf_period,
-        portfolio_params={"annualized_factor": float(periods_per_year)},
+    return fit_estimator(
+        returns, max_sortino_model(rfr=rfr, periods_per_year=periods_per_year)
     )
-    return _fit_mean_risk(frame, model, dropped)
 
 
 def max_sharpe(
@@ -128,12 +178,6 @@ def max_sharpe(
     periods_per_year: int = DEFAULT_PERIODS_PER_YEAR,
 ) -> FittedPortfolio:
     """Maximize Sharpe ratio (mean excess return / standard deviation)."""
-    frame, dropped = _prepare(returns)
-    rf_period = daily_rfr(rfr, periods_per_year=periods_per_year)
-    model = MeanRisk(
-        objective_function=ObjectiveFunction.MAXIMIZE_RATIO,
-        risk_measure=RiskMeasure.VARIANCE,
-        risk_free_rate=rf_period,
-        portfolio_params={"annualized_factor": float(periods_per_year)},
+    return fit_estimator(
+        returns, max_sharpe_model(rfr=rfr, periods_per_year=periods_per_year)
     )
-    return _fit_mean_risk(frame, model, dropped)

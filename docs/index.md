@@ -71,7 +71,7 @@ PIT prices, asset price history, share-price series, and intent vs holdings.
 :link: return-stats
 :link-type: ref
 
-SASR ranking, skfolio Sharpe/vol/CVaR, covariance, PCA, and MeanRisk weights.
+SASR ranking, skfolio-backed measures, IntentSession fit → submit.
 :::
 
 :::{grid-item-card} Estimate execution cost

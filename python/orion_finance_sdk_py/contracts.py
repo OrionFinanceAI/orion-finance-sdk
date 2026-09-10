@@ -13,6 +13,7 @@ from web3.exceptions import BadFunctionCallOutput
 from web3.types import HexStr, TxReceipt
 
 from .console_ui import progress_step
+from .orion_config_env import resolve_orion_config_address
 from .rpc import (
     block_at_timestamp as lookup_block_at_timestamp,
 )
@@ -22,10 +23,11 @@ from .rpc import (
     make_http_provider,
     pick_default_rpc,
 )
-from .types import CHAIN_CONFIG, ZERO_ADDRESS, VaultType
+from .types import ZERO_ADDRESS, VaultType
 from .utils import (
     MAX_MANAGEMENT_FEE,
     MAX_PERFORMANCE_FEE,
+    checksum_address,
     validate_var,
 )
 
@@ -47,19 +49,26 @@ def _get_view_call_tx():
     return {}
 
 
-def _call_view(contract_fn, block_identifier: int | str | None = None):
+def _call_view(
+    contract_fn,
+    block_identifier: int | str | None = None,
+    *,
+    tx: dict | None = None,
+):
     """Execute a view/pure contract call (uses gas override in fork/dev when ORION_FORCE_VIEW_GAS is set).
 
     Args:
         contract_fn: Bound contract function call (e.g. ``contract.functions.foo()``).
         block_identifier: Optional block number or tag (default: ``"latest"``).
+        tx: Optional ``eth_call`` transaction fields merged over the default view tx
+            (e.g. ``{"from": vault}`` so ACL contracts see the vault as ``msg.sender``).
     """
-    tx = _get_view_call_tx()
+    call_tx = {**_get_view_call_tx(), **(tx or {})}
 
     def _do_call():
         if block_identifier is None:
-            return contract_fn.call(tx)
-        return contract_fn.call(tx, block_identifier=block_identifier)
+            return contract_fn.call(call_tx)
+        return contract_fn.call(call_tx, block_identifier=block_identifier)
 
     return call_with_rpc_retry(_do_call)
 
@@ -134,9 +143,9 @@ class OrionSmartContract:
                     print(f"⚠️ Warning: Invalid CHAIN_ID in env: {env_chain_id}")
 
             self.contract_name = contract_name
-            self.contract_address = contract_address
+            self.contract_address = checksum_address(contract_address)
             self.contract = self.w3.eth.contract(
-                address=Web3.to_checksum_address(self.contract_address),
+                address=self.contract_address,
                 abi=load_contract_abi(self.contract_name),
             )
             return
@@ -146,9 +155,9 @@ class OrionSmartContract:
             self.w3 = Web3(make_http_provider(default_rpc))
             self.chain_id = self.w3.eth.chain_id
             self.contract_name = contract_name
-            self.contract_address = contract_address
+            self.contract_address = checksum_address(contract_address)
             self.contract = self.w3.eth.contract(
-                address=Web3.to_checksum_address(self.contract_address),
+                address=self.contract_address,
                 abi=load_contract_abi(self.contract_name),
             )
             return
@@ -273,7 +282,7 @@ class OrionSmartContract:
 
     def _has_code_at(self, block: int) -> bool:
         """Return True if this address has contract code at ``block``."""
-        address = Web3.to_checksum_address(self.contract_address)
+        address = checksum_address(self.contract_address)
         code = call_with_rpc_retry(
             lambda: self.w3.eth.get_code(address, block_identifier=block)
         )
@@ -343,20 +352,7 @@ class OrionConfig(OrionSmartContract):
 
     def __init__(self):
         """Initialize the OrionConfig contract."""
-        # Check for manual address override first
-        contract_address = os.getenv("ORION_CONFIG_ADDRESS")
-
-        if not contract_address:
-            # Default to Sepolia if not specified, but prefer env var
-            chain_id = int(os.getenv("CHAIN_ID", "11155111"))
-
-            if chain_id in CHAIN_CONFIG:
-                contract_address = CHAIN_CONFIG[chain_id]["OrionConfig"]
-            else:
-                raise ValueError(
-                    f"Unsupported CHAIN_ID: {chain_id}. Please check CHAIN_CONFIG in types.py or set CHAIN_ID env var correctly."
-                )
-
+        contract_address = resolve_orion_config_address()
         super().__init__(
             contract_name="OrionConfig",
             contract_address=contract_address,
@@ -401,7 +397,7 @@ class OrionConfig(OrionSmartContract):
         """Fetch the decimals of a token address."""
         return _call_view(
             self.contract.functions.tokenDecimals(
-                Web3.to_checksum_address(token_address)
+                checksum_address(token_address)
             )
         )
 
@@ -439,7 +435,7 @@ class OrionConfig(OrionSmartContract):
         """Check if a token address is whitelisted."""
         return _call_view(
             self.contract.functions.isWhitelisted(
-                Web3.to_checksum_address(token_address)
+                checksum_address(token_address)
             )
         )
 
@@ -447,7 +443,7 @@ class OrionConfig(OrionSmartContract):
         """Check if a manager address is whitelisted."""
         return _call_view(
             self.contract.functions.isWhitelistedManager(
-                Web3.to_checksum_address(manager_address)
+                checksum_address(manager_address)
             )
         )
 
@@ -455,7 +451,7 @@ class OrionConfig(OrionSmartContract):
         """Check if an address is a registered Orion vault."""
         return _call_view(
             self.contract.functions.isOrionVault(
-                Web3.to_checksum_address(vault_address)
+                checksum_address(vault_address)
             )
         )
 
@@ -463,7 +459,7 @@ class OrionConfig(OrionSmartContract):
         """Check if an address is a registered Orion encrypted vault."""
         return _call_view(
             self.contract.functions.isEncryptedVault(
-                Web3.to_checksum_address(vault_address)
+                checksum_address(vault_address)
             )
         )
 
@@ -545,7 +541,7 @@ class OrionConfig(OrionSmartContract):
         """Check if a vault is fully decommissioned."""
         return _call_view(
             self.contract.functions.isDecommissionedVault(
-                Web3.to_checksum_address(vault_address)
+                checksum_address(vault_address)
             )
         )
 
@@ -553,7 +549,7 @@ class OrionConfig(OrionSmartContract):
         """Check if a vault is currently decommissioning."""
         return _call_view(
             self.contract.functions.isDecommissioningVault(
-                Web3.to_checksum_address(vault_address)
+                checksum_address(vault_address)
             )
         )
 
@@ -574,7 +570,7 @@ class OrionConfig(OrionSmartContract):
                 "System is not idle. Cannot remove Orion vault at this time."
             )
 
-        vault_address = Web3.to_checksum_address(vault_address)
+        vault_address = checksum_address(vault_address)
         progress_step("Verifying vault registration")
         if not self.is_orion_vault(vault_address):
             raise ValueError(
@@ -598,7 +594,7 @@ class OrionConfig(OrionSmartContract):
         )
         vault_manager = _call_view(vault_contract.functions.manager())
         progress_step("Verifying vault manager signer")
-        if account.address != Web3.to_checksum_address(vault_manager):
+        if account.address != checksum_address(vault_manager):
             raise ValueError(
                 f"Signer {account.address} is not the vault manager "
                 f"{vault_manager}. Cannot remove vault."
@@ -658,7 +654,7 @@ class PriceAdapterRegistry(OrionSmartContract):
             Price scaled by ``price_adapter_decimals``.
         """
         return _call_view(
-            self.contract.functions.getPrice(Web3.to_checksum_address(asset)),
+            self.contract.functions.getPrice(checksum_address(asset)),
             block_identifier=block,
         )
 
@@ -682,7 +678,7 @@ class PriceAdapterRegistry(OrionSmartContract):
             config = OrionConfig()
             assets = config.whitelisted_assets
         return {
-            Web3.to_checksum_address(asset): self.get_price(asset, block=block)
+            checksum_address(asset): self.get_price(asset, block=block)
             for asset in assets
         }
 
@@ -800,7 +796,7 @@ class LiquidityOrchestrator(OrionSmartContract):
 
     def get_asset_prices(self, assets: Iterable[str]) -> list[int]:
         """Fetch LO-reported prices for the given assets."""
-        checksummed = [Web3.to_checksum_address(a) for a in assets]
+        checksummed = [checksum_address(a) for a in assets]
         return list(_call_view(self.contract.functions.getAssetPrices(checksummed)))
 
 
@@ -917,9 +913,9 @@ class VaultFactory(OrionSmartContract):
             fee_type,
             performance_fee,
             management_fee,
-            Web3.to_checksum_address(deposit_access_control),
-            Web3.to_checksum_address(holder_access_control),
-            Web3.to_checksum_address(transfer_access_control),
+            checksum_address(deposit_access_control),
+            checksum_address(holder_access_control),
+            checksum_address(transfer_access_control),
         )
 
         # Estimate gas needed for the transaction
@@ -1017,6 +1013,8 @@ class OrionVault(OrionSmartContract):
                 contract_address,
                 error_message="Vault contract_address is missing or invalid.",
             )
+
+        contract_address = checksum_address(contract_address)
 
         # Validate that the address is a registered Orion vault (transparent or encrypted)
         config = OrionConfig()
@@ -1151,7 +1149,7 @@ class OrionVault(OrionSmartContract):
     def balance_of(self, account: str) -> int:
         """Fetch vault share balance for an account."""
         return _call_view(
-            self.contract.functions.balanceOf(Web3.to_checksum_address(account))
+            self.contract.functions.balanceOf(checksum_address(account))
         )
 
     @property
@@ -1163,8 +1161,8 @@ class OrionVault(OrionSmartContract):
         """Fetch vault share allowance."""
         return _call_view(
             self.contract.functions.allowance(
-                Web3.to_checksum_address(owner),
-                Web3.to_checksum_address(spender),
+                checksum_address(owner),
+                checksum_address(spender),
             )
         )
 
@@ -1182,19 +1180,19 @@ class OrionVault(OrionSmartContract):
     def max_mint(self, receiver: str) -> int:
         """Fetch max mint for ``receiver``."""
         return _call_view(
-            self.contract.functions.maxMint(Web3.to_checksum_address(receiver))
+            self.contract.functions.maxMint(checksum_address(receiver))
         )
 
     def max_redeem(self, owner: str) -> int:
         """Fetch max redeem for ``owner``."""
         return _call_view(
-            self.contract.functions.maxRedeem(Web3.to_checksum_address(owner))
+            self.contract.functions.maxRedeem(checksum_address(owner))
         )
 
     def max_withdraw(self, owner: str) -> int:
         """Fetch max withdraw for ``owner``."""
         return _call_view(
-            self.contract.functions.maxWithdraw(Web3.to_checksum_address(owner))
+            self.contract.functions.maxWithdraw(checksum_address(owner))
         )
 
     def _execute_vault_tx(
@@ -1263,7 +1261,7 @@ class OrionVault(OrionSmartContract):
         """Submit a deposit request credited to ``beneficiary``."""
         return self._execute_vault_tx(
             self.contract.functions.requestDepositFor(
-                Web3.to_checksum_address(beneficiary), assets
+                checksum_address(beneficiary), assets
             ),
             key_env=key_env,
             error_msg=f"{key_env} missing for deposit request.",
@@ -1317,8 +1315,8 @@ class OrionVault(OrionSmartContract):
         return self._execute_vault_tx(
             self.contract.functions.redeem(
                 shares,
-                Web3.to_checksum_address(receiver),
-                Web3.to_checksum_address(owner),
+                checksum_address(receiver),
+                checksum_address(owner),
             ),
             key_env=key_env,
             error_msg=f"{key_env} missing for redeem.",
@@ -1329,7 +1327,7 @@ class OrionVault(OrionSmartContract):
     ) -> TransactionResult:
         """Approve ``spender`` to transfer vault shares."""
         return self._execute_vault_tx(
-            self.contract.functions.approve(Web3.to_checksum_address(spender), amount),
+            self.contract.functions.approve(checksum_address(spender), amount),
             key_env=key_env,
             error_msg=f"{key_env} missing for share approve.",
         )
@@ -1339,7 +1337,7 @@ class OrionVault(OrionSmartContract):
     ) -> TransactionResult:
         """Transfer vault shares."""
         return self._execute_vault_tx(
-            self.contract.functions.transfer(Web3.to_checksum_address(to), amount),
+            self.contract.functions.transfer(checksum_address(to), amount),
             key_env=key_env,
             error_msg=f"{key_env} missing for share transfer.",
         )
@@ -1355,8 +1353,8 @@ class OrionVault(OrionSmartContract):
         """Transfer vault shares via allowance."""
         return self._execute_vault_tx(
             self.contract.functions.transferFrom(
-                Web3.to_checksum_address(from_address),
-                Web3.to_checksum_address(to),
+                checksum_address(from_address),
+                checksum_address(to),
                 amount,
             ),
             key_env=key_env,
@@ -1662,7 +1660,7 @@ class OrionVault(OrionSmartContract):
 
         values: dict[str, int] = {}
         for token, shares in portfolio.items():
-            checksum = Web3.to_checksum_address(token)
+            checksum = checksum_address(token)
             if checksum.lower() not in price_by_lower:
                 raise ValueError(
                     f"No PIT price for portfolio token {checksum}. "
@@ -1718,7 +1716,7 @@ class OrionVault(OrionSmartContract):
 
         nonce = self.w3.eth.get_transaction_count(account.address, "pending")
         setter = getattr(self.contract.functions, setter_name)
-        tx = setter(Web3.to_checksum_address(access_control_address)).build_transaction(
+        tx = setter(checksum_address(access_control_address)).build_transaction(
             {"from": account.address, "nonce": nonce}
         )
 
@@ -1770,7 +1768,7 @@ class OrionVault(OrionSmartContract):
         """Fetch escrowed underlying claimable by ``account`` (failed fulfill)."""
         return _call_view(
             self.contract.functions.pendingUnderlyingClaim(
-                Web3.to_checksum_address(account)
+                checksum_address(account)
             )
         )
 
@@ -1785,7 +1783,7 @@ class OrionVault(OrionSmartContract):
     def max_deposit(self, receiver: str) -> int:
         """Fetch the maximum deposit amount for a receiver."""
         return _call_view(
-            self.contract.functions.maxDeposit(Web3.to_checksum_address(receiver))
+            self.contract.functions.maxDeposit(checksum_address(receiver))
         )
 
     def _acl_allows(
@@ -1795,7 +1793,11 @@ class OrionVault(OrionSmartContract):
         fn_name: str,
         *call_args: str | bytes,
     ) -> bool:
-        """Return True if the ACL is unset/missing, else call the ACL view."""
+        """Return True if the ACL is unset/missing, else call the ACL view.
+
+        ACL contracts are invoked as the vault (``eth_call`` ``from`` = vault),
+        matching on-chain ``msg.sender`` when the vault queries the ACL.
+        """
         try:
             getter = getattr(self.contract.functions, getter_name)
             access_control_address = _call_view(getter())
@@ -1807,7 +1809,10 @@ class OrionVault(OrionSmartContract):
             address=access_control_address,
             abi=load_contract_abi(abi_name),
         )
-        return _call_view(getattr(access_control.functions, fn_name)(*call_args))
+        return _call_view(
+            getattr(access_control.functions, fn_name)(*call_args),
+            tx={"from": self.contract_address},
+        )
 
     def can_request_deposit(self, user: str, data: bytes = b"") -> bool:
         """Check if a user is allowed to request a deposit.
@@ -1820,7 +1825,7 @@ class OrionVault(OrionSmartContract):
             "depositAccessControl",
             "IOrionDepositAccessControl",
             "canRequestDeposit",
-            Web3.to_checksum_address(user),
+            checksum_address(user),
             data,
         )
 
@@ -1833,7 +1838,7 @@ class OrionVault(OrionSmartContract):
             "holderAccessControl",
             "IOrionHolderAccessControl",
             "canHoldShares",
-            Web3.to_checksum_address(account),
+            checksum_address(account),
         )
 
     def can_transfer_shares(self, sender: str, data: bytes = b"") -> bool:
@@ -1846,7 +1851,7 @@ class OrionVault(OrionSmartContract):
             "transferAccessControl",
             "IOrionTransferAccessControl",
             "canTransferShares",
-            Web3.to_checksum_address(sender),
+            checksum_address(sender),
             data,
         )
 
@@ -1875,7 +1880,7 @@ class OrionTransparentVault(OrionVault):
         config = OrionConfig()
         scale = 10**config.strategist_intent_decimals
         return {
-            Web3.to_checksum_address(token): int(weight) / scale
+            checksum_address(token): int(weight) / scale
             for token, weight in zip(tokens, weights, strict=True)
         }
 
@@ -1918,7 +1923,7 @@ class OrionTransparentVault(OrionVault):
         nonce = self.w3.eth.get_transaction_count(account.address, "pending")
 
         items = [
-            {"token": Web3.to_checksum_address(token), "weight": value}
+            {"token": checksum_address(token), "weight": value}
             for token, value in order_intent.items()
         ]
 
