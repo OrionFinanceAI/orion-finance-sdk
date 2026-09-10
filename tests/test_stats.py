@@ -445,7 +445,7 @@ def test_min_variance_rejects_single_asset() -> None:
             index=idx,
         )
     )
-    with pytest.raises(ValueError, match="MeanRisk needs at least 2"):
+    with pytest.raises(ValueError, match="Estimator needs at least 2"):
         min_variance(rs)
 
 

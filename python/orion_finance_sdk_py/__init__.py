@@ -16,6 +16,7 @@ from orion_finance_sdk_py.contracts import (
 from orion_finance_sdk_py.costs import ExecutionCost, ExecutionCostEstimator, get_cost
 from orion_finance_sdk_py.hpke import seal_intent, seal_portfolio
 from orion_finance_sdk_py.intent import Intent
+from orion_finance_sdk_py.lifecycle import IntentSession, weights_to_intent
 from orion_finance_sdk_py.order_intent_io import load_order_intent
 from orion_finance_sdk_py.stats import ReturnSeries, covariance, measures, rank_products
 
@@ -27,6 +28,7 @@ __all__ = [
     "ExecutionCost",
     "ExecutionCostEstimator",
     "Intent",
+    "IntentSession",
     "LiquidityOrchestrator",
     "OrionConfig",
     "OrionEncryptedVault",
@@ -50,4 +52,5 @@ __all__ = [
     "strategist",
     "submit_intent",
     "views",
+    "weights_to_intent",
 ]
