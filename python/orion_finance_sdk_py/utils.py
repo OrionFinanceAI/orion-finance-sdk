@@ -67,6 +67,28 @@ LP_PRIVATE_KEY=
             pass
 
 
+def upsert_dotenv_key(env_file_path: Path, key: str, value: str) -> None:
+    """Set ``key=value`` in a dotenv file, replacing an existing (or commented) assignment."""
+    new_line = f"{key}={value}"
+    if not env_file_path.exists():
+        env_file_path.write_text(new_line + "\n")
+        return
+    raw_lines = env_file_path.read_text().splitlines()
+    out: list[str] = []
+    found = False
+    for raw in raw_lines:
+        stripped = raw.strip()
+        if stripped.startswith(f"{key}=") or stripped.startswith(f"#{key}="):
+            if not found:
+                out.append(new_line)
+                found = True
+            continue
+        out.append(raw)
+    if not found:
+        out.append(new_line)
+    env_file_path.write_text("\n".join(out) + "\n")
+
+
 def to_base_units(amount: str | int | float | Decimal, decimals: int) -> int:
     """Convert a human token amount to onchain integer units.
 

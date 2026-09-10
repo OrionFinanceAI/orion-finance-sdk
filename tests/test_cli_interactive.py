@@ -1,5 +1,6 @@
 """Tests for the interactive CLI menu."""
 
+import os
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -26,6 +27,41 @@ def test_ask_or_exit_cancel():
     mock_question.ask.return_value = None
     with pytest.raises(KeyboardInterrupt):
         ask_or_exit(mock_question)
+
+
+def test_lock_session_chain_from_cli_skips_prompt(monkeypatch):
+    from orion_finance_sdk_py.cli import _lock_session_chain
+
+    monkeypatch.delenv("CHAIN", raising=False)
+    monkeypatch.delenv("CHAIN_ID", raising=False)
+    assert _lock_session_chain("mainnet") == "mainnet"
+    assert os.environ["CHAIN_ID"] == "1"
+    assert os.environ["CHAIN"] == "mainnet"
+
+
+@patch("orion_finance_sdk_py.cli.load_dotenv")
+@patch("orion_finance_sdk_py.cli.print_welcome")
+@patch("orion_finance_sdk_py.cli.print_session_bar")
+@patch("orion_finance_sdk_py.cli.questionary")
+def test_interactive_menu_reapplies_locked_chain_after_dotenv(
+    mock_questionary, mock_bar, mock_welcome, mock_dotenv, monkeypatch
+):
+    """Mid-session dotenv reload must not switch the locked network."""
+    monkeypatch.setenv("CHAIN_ID", "11155111")
+    monkeypatch.setenv("CHAIN", "sepolia")
+
+    def dotenv_side_effect(*_a, **_k):
+        # Simulate .env flipping to mainnet on reload.
+        os.environ["CHAIN_ID"] = "1"
+        os.environ["CHAIN"] = "mainnet"
+
+    mock_dotenv.side_effect = dotenv_side_effect
+    mock_questionary.select.return_value.ask.side_effect = ["Exit"]
+
+    interactive_menu(chain_from_cli="sepolia")
+
+    assert os.environ["CHAIN_ID"] == "11155111"
+    assert os.environ["CHAIN"] == "sepolia"
 
 
 def test_validate_name():
@@ -78,7 +114,7 @@ def test_interactive_menu_deploy_vault(mock_deploy_logic, mock_questionary, mock
     mock_questionary.select.return_value.ask.side_effect = next_answer
     mock_questionary.text.return_value.ask.side_effect = next_answer
 
-    interactive_menu()
+    interactive_menu(chain_from_cli="sepolia")
 
     mock_deploy_logic.assert_called_once()
     args = mock_deploy_logic.call_args[0]
@@ -116,7 +152,7 @@ def test_interactive_menu_submit_intent(
     mock_questionary.select.return_value.ask.side_effect = lambda: next(iterator)
     mock_questionary.text.return_value.ask.side_effect = lambda: next(iterator)
 
-    interactive_menu()
+    interactive_menu(chain_from_cli="sepolia")
 
     mock_submit_logic.assert_called_once_with("order.json")
 
@@ -143,7 +179,7 @@ def test_interactive_menu_update_strategist(
     mock_questionary.select.return_value.ask.side_effect = lambda: next(iterator)
     mock_questionary.text.return_value.ask.side_effect = lambda: next(iterator)
 
-    interactive_menu()
+    interactive_menu(chain_from_cli="sepolia")
 
     mock_update_logic.assert_called_once_with("0xNew")
 
@@ -174,7 +210,7 @@ def test_interactive_menu_update_fee_model(
     mock_questionary.select.return_value.ask.side_effect = lambda: next(iterator)
     mock_questionary.text.return_value.ask.side_effect = lambda: next(iterator)
 
-    interactive_menu()
+    interactive_menu(chain_from_cli="sepolia")
 
     mock_fee_logic.assert_called_once()
     args = mock_fee_logic.call_args[0]
@@ -201,7 +237,7 @@ def test_interactive_menu_cancel(mock_questionary, mock_input):
     mock_questionary.select.return_value.ask.side_effect = next_answer
     mock_questionary.text.return_value.ask.side_effect = next_answer
 
-    interactive_menu()
+    interactive_menu(chain_from_cli="sepolia")
 
     assert mock_questionary.select.call_count >= 2
 
@@ -221,7 +257,7 @@ def test_interactive_menu_update_dac(mock_dac_logic, mock_questionary, mock_inpu
     mock_questionary.select.return_value.ask.side_effect = lambda: next(iterator)
     mock_questionary.text.return_value.ask.side_effect = lambda: next(iterator)
 
-    interactive_menu()
+    interactive_menu(chain_from_cli="sepolia")
 
     mock_dac_logic.assert_called_once_with("0xDAC")
 
@@ -241,7 +277,7 @@ def test_interactive_menu_update_hac(mock_hac_logic, mock_questionary, mock_inpu
     mock_questionary.select.return_value.ask.side_effect = lambda: next(iterator)
     mock_questionary.text.return_value.ask.side_effect = lambda: next(iterator)
 
-    interactive_menu()
+    interactive_menu(chain_from_cli="sepolia")
 
     mock_hac_logic.assert_called_once_with("0xHAC")
 
@@ -261,7 +297,7 @@ def test_interactive_menu_update_tac(mock_tac_logic, mock_questionary, mock_inpu
     mock_questionary.select.return_value.ask.side_effect = lambda: next(iterator)
     mock_questionary.text.return_value.ask.side_effect = lambda: next(iterator)
 
-    interactive_menu()
+    interactive_menu(chain_from_cli="sepolia")
 
     mock_tac_logic.assert_called_once_with("0xTAC")
 
@@ -281,7 +317,7 @@ def test_interactive_menu_claim_fees(mock_claim_logic, mock_questionary, mock_in
     mock_questionary.select.return_value.ask.side_effect = lambda: next(iterator)
     mock_questionary.text.return_value.ask.side_effect = lambda: next(iterator)
 
-    interactive_menu()
+    interactive_menu(chain_from_cli="sepolia")
 
     mock_claim_logic.assert_called_once_with(100)
 
@@ -301,7 +337,7 @@ def test_interactive_menu_get_pending_fees(
 
     mock_questionary.select.return_value.ask.side_effect = lambda: next(iterator)
 
-    interactive_menu()
+    interactive_menu(chain_from_cli="sepolia")
 
     mock_pending_logic.assert_called_once()
 
@@ -321,7 +357,7 @@ def test_interactive_menu_list_asset_address_map(
 
     mock_questionary.select.return_value.ask.side_effect = lambda: next(iterator)
 
-    interactive_menu()
+    interactive_menu(chain_from_cli="sepolia")
 
     mock_map_logic.assert_called_once()
 
@@ -357,7 +393,7 @@ def test_interactive_menu_error_handling(
     mock_questionary.select.return_value.ask.side_effect = next_answer
     mock_questionary.text.return_value.ask.side_effect = next_answer
 
-    interactive_menu()
+    interactive_menu(chain_from_cli="sepolia")
 
     # Should call deploy, raise error, catch it, wait for input, and loop back to Exit
     mock_deploy_logic.assert_called_once()
@@ -383,7 +419,7 @@ def test_interactive_request_deposit(
     mock_logic, _mock_meta, mock_questionary, mock_input
 ):
     _wire_questionary(mock_questionary, ["Request Deposit", "1.5", "Exit"])
-    interactive_menu()
+    interactive_menu(chain_from_cli="sepolia")
     mock_logic.assert_called_once_with(1_500_000)
 
 
@@ -395,7 +431,7 @@ def test_interactive_cancel_deposit(
     mock_logic, _mock_meta, mock_questionary, mock_input
 ):
     _wire_questionary(mock_questionary, ["Cancel Deposit Request", "40", "Exit"])
-    interactive_menu()
+    interactive_menu(chain_from_cli="sepolia")
     mock_logic.assert_called_once_with(40_000_000)
 
 
@@ -404,7 +440,7 @@ def test_interactive_cancel_deposit(
 @patch("orion_finance_sdk_py.cli._request_redeem_logic")
 def test_interactive_request_redeem(mock_logic, mock_questionary, mock_input):
     _wire_questionary(mock_questionary, ["Request Redeem", "15", "Exit"])
-    interactive_menu()
+    interactive_menu(chain_from_cli="sepolia")
     mock_logic.assert_called_once_with(15)
 
 
@@ -413,7 +449,7 @@ def test_interactive_request_redeem(mock_logic, mock_questionary, mock_input):
 @patch("orion_finance_sdk_py.cli._cancel_redeem_logic")
 def test_interactive_cancel_redeem(mock_logic, mock_questionary, mock_input):
     _wire_questionary(mock_questionary, ["Cancel Redeem Request", "9", "Exit"])
-    interactive_menu()
+    interactive_menu(chain_from_cli="sepolia")
     mock_logic.assert_called_once_with(9)
 
 
@@ -425,7 +461,7 @@ def test_interactive_redeem_decommissioned(mock_logic, mock_questionary, mock_in
         mock_questionary,
         ["Redeem (Decommissioned)", "3", "0xReceiver", "0xOwner", "Exit"],
     )
-    interactive_menu()
+    interactive_menu(chain_from_cli="sepolia")
     mock_logic.assert_called_once_with(3, "0xReceiver", "0xOwner")
 
 
@@ -434,7 +470,7 @@ def test_interactive_redeem_decommissioned(mock_logic, mock_questionary, mock_in
 @patch("orion_finance_sdk_py.cli._remove_vault_logic")
 def test_interactive_remove_vault_confirmed(mock_logic, mock_questionary, mock_input):
     _wire_questionary(mock_questionary, ["Remove Vault", True, "Exit"])
-    interactive_menu()
+    interactive_menu(chain_from_cli="sepolia")
     mock_logic.assert_called_once()
 
 
@@ -445,7 +481,7 @@ def test_interactive_remove_vault_cancelled(
     mock_logic, mock_questionary, mock_input, capsys
 ):
     _wire_questionary(mock_questionary, ["Remove Vault", False, "Exit"])
-    interactive_menu()
+    interactive_menu(chain_from_cli="sepolia")
     mock_logic.assert_not_called()
     captured = capsys.readouterr()
     assert "Vault removal cancelled." in captured.out + captured.err
@@ -456,7 +492,7 @@ def test_interactive_remove_vault_cancelled(
 @patch("orion_finance_sdk_py.cli._list_whitelisted_assets_logic")
 def test_interactive_list_whitelisted_assets(mock_logic, mock_questionary, mock_input):
     _wire_questionary(mock_questionary, ["List Whitelisted Assets", "Exit"])
-    interactive_menu()
+    interactive_menu(chain_from_cli="sepolia")
     mock_logic.assert_called_once()
 
 

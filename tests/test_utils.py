@@ -46,6 +46,21 @@ def test_ensure_env_file_exists(tmp_path):
     assert env_file.read_text() == "EXISTING_CONTENT=1"
 
 
+def test_upsert_dotenv_key_creates_and_replaces(tmp_path):
+    from orion_finance_sdk_py.utils import upsert_dotenv_key
+
+    env_file = tmp_path / ".env"
+    upsert_dotenv_key(env_file, "CHAIN", "sepolia")
+    assert "CHAIN=sepolia" in env_file.read_text()
+
+    env_file.write_text("#CHAIN=sepolia\nRPC_URL=http://x\n")
+    upsert_dotenv_key(env_file, "CHAIN", "mainnet")
+    text = env_file.read_text()
+    assert "CHAIN=mainnet" in text
+    assert "#CHAIN=sepolia" not in text
+    assert "RPC_URL=http://x" in text
+
+
 def test_validate_var():
     """Test environment variable validation."""
     # Should raise ValueError if invalid

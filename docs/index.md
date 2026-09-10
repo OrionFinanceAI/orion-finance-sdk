@@ -136,7 +136,7 @@ Create a `.env` in your project directory. Keep it private and never commit it.
 
 | Task | Variables |
 | ---- | --------- |
-| Network | `CHAIN=sepolia\|mainnet` (default sepolia), or `CHAIN_ID`; CLI: `orion --chain mainnet …`. Match `RPC_URL` to that chain. |
+| Network | Interactive: pick Sepolia/Mainnet once at start (or `orion --chain …` to skip). Scriptable: `orion --chain mainnet <cmd>`. Env: `CHAIN` / `CHAIN_ID`. Restart console to change chain. Match `RPC_URL` to that chain. |
 | OrionConfig | `SEPOLIA_ORION_CONFIG_ADDRESS` or `MAINNET_ORION_CONFIG_ADDRESS` for the active chain (required; no defaults) |
 | Deploy / manage a vault | `MANAGER_PRIVATE_KEY`, `ORION_VAULT_ADDRESS` (after deploy) |
 | Submit intents | `ORION_VAULT_ADDRESS`, `STRATEGIST_PRIVATE_KEY` |

@@ -148,6 +148,20 @@ def _chain_label() -> str:
     return f"{name} ({chain_id})"
 
 
+def session_readiness_hints() -> list[str]:
+    """Return non-blocking warnings for missing RPC / OrionConfig on the active chain."""
+    hints: list[str] = []
+    if not (os.getenv("RPC_URL") or "").strip():
+        hints.append("RPC_URL not set")
+    chain_id = int(os.getenv("CHAIN_ID", "11155111"))
+    cfg_name = (
+        "MAINNET_ORION_CONFIG_ADDRESS" if chain_id == 1 else "SEPOLIA_ORION_CONFIG_ADDRESS"
+    )
+    if not (os.getenv(cfg_name) or "").strip():
+        hints.append(f"{cfg_name} not set")
+    return hints
+
+
 def _explorer_url() -> str:
     chain_id = int(os.getenv("CHAIN_ID", "11155111"))
     if chain_id in CHAIN_CONFIG and "Explorer" in CHAIN_CONFIG[chain_id]:
@@ -342,10 +356,15 @@ def print_session_bar() -> None:
     line.append("Orion Console", style="bold")
     line.append(f"  v{_sdk_version()}", style="dim")
     line.append("  ·  ", style="dim")
-    line.append(_chain_label(), style="dim")
+    line.append(_chain_label(), style="bold")
     line.append("  ·  Vault ", style="dim")
     line.append(vault_display, style="dim")
     console.print(line)
+    for hint in session_readiness_hints():
+        warn = Text()
+        warn.append("  ! ", style="bold yellow")
+        warn.append(hint, style="yellow")
+        console.print(warn)
     console.print()
 
 
