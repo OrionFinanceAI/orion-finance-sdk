@@ -6,10 +6,14 @@ ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
 
 # Configuration for supported chains
 CHAIN_CONFIG = {
+    1: {  # Ethereum Mainnet — OrionConfig TBD until protocol deploy
+        "OrionConfig": ZERO_ADDRESS,
+        "Explorer": "https://etherscan.io",
+    },
     11155111: {  # Sepolia
         "OrionConfig": "0xbDe3025d08681a02a1c6cf70375baBe2152DD06f",
         "Explorer": "https://sepolia.etherscan.io",
-    }
+    },
 }
 
 

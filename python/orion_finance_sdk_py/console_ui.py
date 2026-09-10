@@ -27,8 +27,8 @@ _active_progress: contextvars.ContextVar["OperationProgress | None"] = (
 )
 
 _CHAIN_LABELS = {
+    1: "Ethereum Mainnet",
     11155111: "Sepolia",
-    1: "Mainnet",
 }
 
 
