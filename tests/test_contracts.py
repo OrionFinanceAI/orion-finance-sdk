@@ -110,6 +110,7 @@ def mock_env():
         "LP_PRIVATE_KEY": "0xPrivate",
         "CURATOR_PRIVATE_KEY": "0xPrivate",
         "ORION_VAULT_ADDRESS": "0xVault",
+        "SEPOLIA_ORION_CONFIG_ADDRESS": "0xbDe3025d08681a02a1c6cf70375baBe2152DD06f",
     }
     with patch.dict(os.environ, env_vars):
         yield
@@ -392,19 +393,20 @@ class TestOrionConfig:
         assert config.price_adapter_decimals == 8
 
     @pytest.mark.usefixtures("mock_w3", "mock_load_abi")
-    def test_init_invalid_chain(self):
-        """Test init with invalid chain ID (chain 1 not in CHAIN_CONFIG)."""
-        # Force address from CHAIN_ID so we hit the "unsupported chain" path
+    def test_init_mainnet_requires_mainnet_env(self):
+        """CHAIN_ID=1 reads MAINNET_* only; SEPOLIA_* and ORION_CONFIG_ADDRESS are ignored."""
         with patch.dict(
             os.environ,
             {
                 "CHAIN_ID": "1",
                 "RPC_URL": "http://localhost",
-                "ORION_CONFIG_ADDRESS": "",  # unset so OrionConfig uses CHAIN_ID
+                "SEPOLIA_ORION_CONFIG_ADDRESS": "0xbDe3025d08681a02a1c6cf70375baBe2152DD06f",
+                "ORION_CONFIG_ADDRESS": "0xbDe3025d08681a02a1c6cf70375baBe2152DD06f",
+                "MAINNET_ORION_CONFIG_ADDRESS": "",
             },
             clear=False,
         ):
-            with pytest.raises(ValueError, match="Unsupported CHAIN_ID"):
+            with pytest.raises(ValueError, match="MAINNET_ORION_CONFIG_ADDRESS is required"):
                 OrionConfig()
 
     @pytest.mark.usefixtures("mock_w3", "mock_load_abi")
