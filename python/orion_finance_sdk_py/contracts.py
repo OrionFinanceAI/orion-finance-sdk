@@ -13,6 +13,7 @@ from web3.exceptions import BadFunctionCallOutput
 from web3.types import HexStr, TxReceipt
 
 from .console_ui import progress_step
+from .orion_config_env import resolve_orion_config_address
 from .rpc import (
     block_at_timestamp as lookup_block_at_timestamp,
 )
@@ -22,7 +23,7 @@ from .rpc import (
     make_http_provider,
     pick_default_rpc,
 )
-from .types import CHAIN_CONFIG, ZERO_ADDRESS, VaultType
+from .types import ZERO_ADDRESS, VaultType
 from .utils import (
     MAX_MANAGEMENT_FEE,
     MAX_PERFORMANCE_FEE,
@@ -344,20 +345,7 @@ class OrionConfig(OrionSmartContract):
 
     def __init__(self):
         """Initialize the OrionConfig contract."""
-        # Check for manual address override first
-        contract_address = os.getenv("ORION_CONFIG_ADDRESS")
-
-        if not contract_address:
-            # Default to Sepolia if not specified, but prefer env var
-            chain_id = int(os.getenv("CHAIN_ID", "11155111"))
-
-            if chain_id in CHAIN_CONFIG:
-                contract_address = CHAIN_CONFIG[chain_id]["OrionConfig"]
-            else:
-                raise ValueError(
-                    f"Unsupported CHAIN_ID: {chain_id}. Please check CHAIN_CONFIG in types.py or set CHAIN_ID env var correctly."
-                )
-
+        contract_address = resolve_orion_config_address()
         super().__init__(
             contract_name="OrionConfig",
             contract_address=contract_address,

@@ -48,6 +48,11 @@ LP_PRIVATE_KEY=
 
 # Vault address
 # ORION_VAULT_ADDRESS=
+
+# Required for the active chain. No ORION_CONFIG_ADDRESS. No defaults.
+# SEPOLIA_ORION_CONFIG_ADDRESS=
+#   Sepolia (comment only, never a code default): 0xbDe3025d08681a02a1c6cf70375baBe2152DD06f
+# MAINNET_ORION_CONFIG_ADDRESS=
 """
 
         try:

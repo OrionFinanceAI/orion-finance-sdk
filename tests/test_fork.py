@@ -108,6 +108,10 @@ def sepolia_fork():
             pytest.skip("anvil did not become ready")
 
         os.environ["RPC_URL"] = local_rpc
+        os.environ.setdefault(
+            "SEPOLIA_ORION_CONFIG_ADDRESS",
+            "0xbDe3025d08681a02a1c6cf70375baBe2152DD06f",
+        )
         yield
     finally:
         proc.terminate()
@@ -441,12 +445,13 @@ def test_vault_portfolio_pct_tvl_on_fork(sepolia_fork, monkeypatch):
     assert vault.point_in_time_total_assets() > 0
 
 
-def test_orion_config_uses_env_address_when_set(sepolia_fork, monkeypatch):
-    """OrionConfig uses ORION_CONFIG_ADDRESS when set (user/config override)."""
+def test_orion_config_uses_sepolia_env_address(sepolia_fork, monkeypatch):
+    """OrionConfig uses SEPOLIA_ORION_CONFIG_ADDRESS (not ORION_CONFIG_ADDRESS)."""
     from orion_finance_sdk_py.types import CHAIN_CONFIG
 
     expected_addr = CHAIN_CONFIG[11155111]["OrionConfig"]
-    monkeypatch.setenv("ORION_CONFIG_ADDRESS", expected_addr)
+    monkeypatch.setenv("SEPOLIA_ORION_CONFIG_ADDRESS", expected_addr)
+    monkeypatch.delenv("ORION_CONFIG_ADDRESS", raising=False)
     config = OrionConfig()
     assert config.contract_address.lower() == expected_addr.lower()
     assert config.underlying_asset is not None
