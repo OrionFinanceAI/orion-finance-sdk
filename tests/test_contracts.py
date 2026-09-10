@@ -1035,6 +1035,9 @@ class TestOrionVaults:
             mock_fn.return_value.call.return_value = True
             assert vault.can_request_deposit("0xUser") is True
             mock_fn.assert_called_with("0xUser", b"")
+            mock_fn.return_value.call.assert_called_with(
+                {"from": vault.contract_address}
+            )
             mock_fn.return_value.call.return_value = False
             assert vault.can_request_deposit("0xUser") is False
             mock_fn.assert_called_with("0xUser", b"")
@@ -1586,6 +1589,9 @@ class TestOrionVaults:
             mock_fn.return_value.call.return_value = True
             assert vault.can_hold_shares("0xUser") is True
             mock_fn.assert_called_with("0xUser")
+            mock_fn.return_value.call.assert_called_with(
+                {"from": vault.contract_address}
+            )
 
         vault.contract.functions.transferAccessControl().call.return_value = (
             "0xTransferAcl"
@@ -1595,6 +1601,9 @@ class TestOrionVaults:
             mock_fn.return_value.call.return_value = False
             assert vault.can_transfer_shares("0xUser") is False
             mock_fn.assert_called_with("0xUser", b"")
+            mock_fn.return_value.call.assert_called_with(
+                {"from": vault.contract_address}
+            )
 
     @patch("orion_finance_sdk_py.contracts.OrionConfig")
     @pytest.mark.usefixtures("mock_w3", "mock_load_abi", "mock_env")

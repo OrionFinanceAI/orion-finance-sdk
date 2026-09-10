@@ -49,19 +49,26 @@ def _get_view_call_tx():
     return {}
 
 
-def _call_view(contract_fn, block_identifier: int | str | None = None):
+def _call_view(
+    contract_fn,
+    block_identifier: int | str | None = None,
+    *,
+    tx: dict | None = None,
+):
     """Execute a view/pure contract call (uses gas override in fork/dev when ORION_FORCE_VIEW_GAS is set).
 
     Args:
         contract_fn: Bound contract function call (e.g. ``contract.functions.foo()``).
         block_identifier: Optional block number or tag (default: ``"latest"``).
+        tx: Optional ``eth_call`` transaction fields merged over the default view tx
+            (e.g. ``{"from": vault}`` so ACL contracts see the vault as ``msg.sender``).
     """
-    tx = _get_view_call_tx()
+    call_tx = {**_get_view_call_tx(), **(tx or {})}
 
     def _do_call():
         if block_identifier is None:
-            return contract_fn.call(tx)
-        return contract_fn.call(tx, block_identifier=block_identifier)
+            return contract_fn.call(call_tx)
+        return contract_fn.call(call_tx, block_identifier=block_identifier)
 
     return call_with_rpc_retry(_do_call)
 
@@ -1786,7 +1793,11 @@ class OrionVault(OrionSmartContract):
         fn_name: str,
         *call_args: str | bytes,
     ) -> bool:
-        """Return True if the ACL is unset/missing, else call the ACL view."""
+        """Return True if the ACL is unset/missing, else call the ACL view.
+
+        ACL contracts are invoked as the vault (``eth_call`` ``from`` = vault),
+        matching on-chain ``msg.sender`` when the vault queries the ACL.
+        """
         try:
             getter = getattr(self.contract.functions, getter_name)
             access_control_address = _call_view(getter())
@@ -1798,7 +1809,10 @@ class OrionVault(OrionSmartContract):
             address=access_control_address,
             abi=load_contract_abi(abi_name),
         )
-        return _call_view(getattr(access_control.functions, fn_name)(*call_args))
+        return _call_view(
+            getattr(access_control.functions, fn_name)(*call_args),
+            tx={"from": self.contract_address},
+        )
 
     def can_request_deposit(self, user: str, data: bytes = b"") -> bool:
         """Check if a user is allowed to request a deposit.
