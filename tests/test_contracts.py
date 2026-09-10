@@ -458,10 +458,11 @@ class TestOrionConfig:
 
     @pytest.mark.usefixtures("mock_w3", "mock_load_abi")
     def test_init_mainnet_requires_mainnet_env(self):
-        """CHAIN_ID=1 reads MAINNET_* only; SEPOLIA_* and ORION_CONFIG_ADDRESS are ignored."""
+        """CHAIN=mainnet reads MAINNET_* only; SEPOLIA_* and ORION_CONFIG_ADDRESS are ignored."""
         with patch.dict(
             os.environ,
             {
+                "CHAIN": "mainnet",
                 "CHAIN_ID": "1",
                 "MAINNET_RPC_URL": "http://localhost",
                 "SEPOLIA_ORION_CONFIG_ADDRESS": "0xbDe3025d08681a02a1c6cf70375baBe2152DD06f",

@@ -133,7 +133,13 @@ def test_print_session_bar_without_vault(capture_console):
 
 def test_print_session_bar_with_vault(capture_console):
     addr = "0x" + "ab" * 20
-    with patch.dict("os.environ", {"ORION_VAULT_ADDRESS": addr}):
+    env = {
+        "CHAIN_ID": "11155111",
+        "ORION_VAULT_ADDRESS": addr,
+        "SEPOLIA_RPC_URL": "http://localhost:8545",
+        "SEPOLIA_ORION_CONFIG_ADDRESS": "0xbDe3025d08681a02a1c6cf70375baBe2152DD06f",
+    }
+    with patch.dict("os.environ", env, clear=False):
         console_ui.print_session_bar()
     out = capture_console.getvalue()
     assert "Vault" in out
