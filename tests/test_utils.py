@@ -32,6 +32,8 @@ def test_ensure_env_file(tmp_path):
     assert "LP_PRIVATE_KEY=" in content
     assert "SEPOLIA_ORION_CONFIG_ADDRESS=" in content
     assert "MAINNET_ORION_CONFIG_ADDRESS=" in content
+    assert "CHAIN=sepolia" in content
+    assert "CHAIN_ID=11155111" in content
 
 
 def test_ensure_env_file_exists(tmp_path):

@@ -10,6 +10,57 @@ from web3 import Web3
 from .types import ZERO_ADDRESS
 
 SEPOLIA_ORION_CONFIG = "0xbDe3025d08681a02a1c6cf70375baBe2152DD06f"
+SEPOLIA_CHAIN_ID = 11155111
+MAINNET_CHAIN_ID = 1
+
+SUPPORTED_CHAIN_NAMES: dict[str, int] = {
+    "sepolia": SEPOLIA_CHAIN_ID,
+    "mainnet": MAINNET_CHAIN_ID,
+}
+CHAIN_ID_TO_NAME: dict[int, str] = {cid: name for name, cid in SUPPORTED_CHAIN_NAMES.items()}
+
+
+def parse_chain_name(name: str) -> int:
+    """Map ``sepolia`` / ``mainnet`` to chain id. Raises ``ValueError`` if unknown."""
+    key = name.strip().lower()
+    if key not in SUPPORTED_CHAIN_NAMES:
+        raise ValueError(f"Unsupported chain: {name!r}. Use sepolia or mainnet.")
+    return SUPPORTED_CHAIN_NAMES[key]
+
+
+def resolve_active_chain_id(
+    chain_cli: str | None = None,
+    env: Mapping[str, str] | None = None,
+) -> int:
+    """Resolve active chain id.
+
+    Priority: ``--chain`` / ``chain_cli`` → ``CHAIN`` env → ``CHAIN_ID`` env → Sepolia.
+    """
+    source: Mapping[str, str | None] = env if env is not None else os.environ
+    if chain_cli is not None and str(chain_cli).strip():
+        return parse_chain_name(str(chain_cli))
+
+    chain_env = (source.get("CHAIN") or "").strip()
+    if chain_env:
+        return parse_chain_name(chain_env)
+
+    raw_id = (source.get("CHAIN_ID") or "").strip()
+    if not raw_id:
+        return SEPOLIA_CHAIN_ID
+    try:
+        return int(raw_id)
+    except ValueError as exc:
+        raise ValueError(f"Invalid CHAIN_ID: {raw_id}") from exc
+
+
+def apply_chain_selection(chain_cli: str | None = None) -> int:
+    """Set ``CHAIN_ID`` (and ``CHAIN`` when known) in ``os.environ`` for the process."""
+    chain_id = resolve_active_chain_id(chain_cli)
+    os.environ["CHAIN_ID"] = str(chain_id)
+    name = CHAIN_ID_TO_NAME.get(chain_id)
+    if name:
+        os.environ["CHAIN"] = name
+    return chain_id
 
 
 def resolve_orion_config_address(
@@ -18,21 +69,15 @@ def resolve_orion_config_address(
 ) -> str:
     """Return checksummed OrionConfig for the active chain.
 
-    ``CHAIN_ID=1`` reads ``MAINNET_ORION_CONFIG_ADDRESS``; anything else
-    (including unset, Sepolia, and local forks) reads ``SEPOLIA_ORION_CONFIG_ADDRESS``.
+    ``CHAIN_ID=1`` / ``CHAIN=mainnet`` reads ``MAINNET_ORION_CONFIG_ADDRESS``;
+    anything else (including unset, Sepolia, and local forks) reads
+    ``SEPOLIA_ORION_CONFIG_ADDRESS``.
     """
     source: Mapping[str, str | None] = env if env is not None else os.environ
     if chain_id is None:
-        raw_id = (source.get("CHAIN_ID") or "").strip()
-        if not raw_id:
-            chain_id = 11155111
-        else:
-            try:
-                chain_id = int(raw_id)
-            except ValueError as exc:
-                raise ValueError(f"Invalid CHAIN_ID: {raw_id}") from exc
+        chain_id = resolve_active_chain_id(env=source)
 
-    is_mainnet = chain_id == 1
+    is_mainnet = chain_id == MAINNET_CHAIN_ID
     name = "MAINNET_ORION_CONFIG_ADDRESS" if is_mainnet else "SEPOLIA_ORION_CONFIG_ADDRESS"
     network = "mainnet" if is_mainnet else "sepolia"
     raw = (source.get(name) or "").strip()

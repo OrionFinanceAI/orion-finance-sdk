@@ -136,6 +136,8 @@ Create a `.env` in your project directory. Keep it private and never commit it.
 
 | Task | Variables |
 | ---- | --------- |
+| Network | `CHAIN=sepolia\|mainnet` (default sepolia), or `CHAIN_ID`; CLI: `orion --chain mainnet …`. Match `RPC_URL` to that chain. |
+| OrionConfig | `SEPOLIA_ORION_CONFIG_ADDRESS` or `MAINNET_ORION_CONFIG_ADDRESS` for the active chain (required; no defaults) |
 | Deploy / manage a vault | `MANAGER_PRIVATE_KEY`, `ORION_VAULT_ADDRESS` (after deploy) |
 | Submit intents | `ORION_VAULT_ADDRESS`, `STRATEGIST_PRIVATE_KEY` |
 | LP deposit / redeem | `ORION_VAULT_ADDRESS`, `LP_PRIVATE_KEY` |
@@ -153,6 +155,7 @@ The SDK ships a CLI named `orion`. With **no subcommand** it opens an interactiv
 ```bash
 orion          # interactive console
 orion --help   # list scriptable commands
+orion --chain mainnet deploy-vault --help
 ```
 
 ### Scriptable commands

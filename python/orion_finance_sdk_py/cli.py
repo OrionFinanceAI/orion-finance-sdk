@@ -32,6 +32,7 @@ from .contracts import (
 from .erc20 import decimals as erc20_decimals
 from .erc20 import symbol as erc20_symbol
 from .order_intent_io import load_order_intent
+from .orion_config_env import apply_chain_selection
 from .types import (
     ZERO_ADDRESS,
     FeeType,
@@ -719,9 +720,17 @@ def interactive_menu():
 
 
 @app.callback(invoke_without_command=True)
-def main(ctx: typer.Context):
+def main(
+    ctx: typer.Context,
+    chain: str | None = typer.Option(
+        None,
+        "--chain",
+        help="Network: sepolia | mainnet (default: sepolia; or CHAIN / CHAIN_ID env)",
+    ),
+):
     """Orion Finance CLI."""
     ensure_env_file()
+    apply_chain_selection(chain)
     if ctx.invoked_subcommand is None:
         interactive_menu()
 

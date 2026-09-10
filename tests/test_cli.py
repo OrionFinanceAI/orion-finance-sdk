@@ -739,3 +739,48 @@ def test_cli_checksum_rejects_invalid_address():
 
     with pytest.raises(ValueError, match="Invalid Ethereum address"):
         _update_deposit_access_control_logic("not-an-address")
+
+
+@patch("orion_finance_sdk_py.cli.VaultFactory")
+@patch("orion_finance_sdk_py.cli.ensure_env_file")
+def test_deploy_vault_chain_flag_sets_mainnet(mock_ensure_env, MockVaultFactory, monkeypatch):
+    """Global --chain mainnet writes CHAIN_ID=1 before deploy."""
+    monkeypatch.delenv("CHAIN_ID", raising=False)
+    monkeypatch.delenv("CHAIN", raising=False)
+    mock_factory = MockVaultFactory.return_value
+    mock_factory.create_orion_vault.return_value = MagicMock(decoded_logs=[])
+    mock_factory.get_vault_address_from_result.return_value = "0xVault"
+
+    result = runner.invoke(
+        app,
+        [
+            "--chain",
+            "mainnet",
+            "deploy-vault",
+            "--name",
+            "Test Vault",
+            "--symbol",
+            "TEST",
+            "--fee-type",
+            "absolute",
+            "--performance-fee",
+            "10",
+            "--management-fee",
+            "1",
+            "--strategist-address",
+            "0xStrategist",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert os.environ["CHAIN_ID"] == "1"
+    assert os.environ["CHAIN"] == "mainnet"
+
+
+@patch("orion_finance_sdk_py.cli.ensure_env_file")
+def test_cli_rejects_unknown_chain(mock_ensure_env):
+    result = runner.invoke(app, ["--chain", "base", "list-whitelisted-assets"])
+    assert result.exit_code != 0
+    assert "Unsupported chain" in _cli_output(result) or "Unsupported chain" in str(
+        result.exception
+    )
