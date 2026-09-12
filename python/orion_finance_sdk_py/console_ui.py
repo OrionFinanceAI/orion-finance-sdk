@@ -17,6 +17,7 @@ from rich.spinner import Spinner
 from rich.table import Table
 from rich.text import Text
 
+from .orion_config_env import write_rpc_env_name
 from .types import CHAIN_CONFIG, ZERO_ADDRESS
 
 # Status and chrome go to stderr so stdout stays pipe-friendly where needed.
@@ -27,8 +28,8 @@ _active_progress: contextvars.ContextVar["OperationProgress | None"] = (
 )
 
 _CHAIN_LABELS = {
+    1: "Ethereum Mainnet",
     11155111: "Sepolia",
-    1: "Mainnet",
 }
 
 
@@ -146,6 +147,21 @@ def _chain_label() -> str:
     chain_id = int(os.getenv("CHAIN_ID", "11155111"))
     name = _CHAIN_LABELS.get(chain_id, f"chain {chain_id}")
     return f"{name} ({chain_id})"
+
+
+def session_readiness_hints() -> list[str]:
+    """Return non-blocking warnings for missing RPC / OrionConfig on the active chain."""
+    hints: list[str] = []
+    chain_id = int(os.getenv("CHAIN_ID", "11155111"))
+    rpc_name = write_rpc_env_name(chain_id)
+    if not (os.getenv(rpc_name) or "").strip():
+        hints.append(f"{rpc_name} not set")
+    cfg_name = (
+        "MAINNET_ORION_CONFIG_ADDRESS" if chain_id == 1 else "SEPOLIA_ORION_CONFIG_ADDRESS"
+    )
+    if not (os.getenv(cfg_name) or "").strip():
+        hints.append(f"{cfg_name} not set")
+    return hints
 
 
 def _explorer_url() -> str:
@@ -342,10 +358,15 @@ def print_session_bar() -> None:
     line.append("Orion Console", style="bold")
     line.append(f"  v{_sdk_version()}", style="dim")
     line.append("  ·  ", style="dim")
-    line.append(_chain_label(), style="dim")
+    line.append(_chain_label(), style="bold")
     line.append("  ·  Vault ", style="dim")
     line.append(vault_display, style="dim")
     console.print(line)
+    for hint in session_readiness_hints():
+        warn = Text()
+        warn.append("  ! ", style="bold yellow")
+        warn.append(hint, style="yellow")
+        console.print(warn)
     console.print()
 
 

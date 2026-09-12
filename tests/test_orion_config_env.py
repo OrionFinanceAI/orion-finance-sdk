@@ -2,8 +2,14 @@ from collections.abc import Mapping
 
 import pytest
 from orion_finance_sdk_py.orion_config_env import (
+    MAINNET_CHAIN_ID,
+    SEPOLIA_CHAIN_ID,
     SEPOLIA_ORION_CONFIG,
+    parse_chain_name,
+    resolve_active_chain_id,
+    resolve_configured_write_rpc_url,
     resolve_orion_config_address,
+    write_rpc_env_name,
 )
 from orion_finance_sdk_py.types import ZERO_ADDRESS
 from web3 import Web3
@@ -71,3 +77,47 @@ def test_chain_id_from_env():
         "MAINNET_ORION_CONFIG_ADDRESS": OTHER,
     }
     assert resolve_orion_config_address(env=env) == Web3.to_checksum_address(OTHER)
+
+
+def test_chain_env_name_selects_mainnet():
+    env = {
+        "CHAIN": "mainnet",
+        "MAINNET_ORION_CONFIG_ADDRESS": OTHER,
+    }
+    assert resolve_orion_config_address(env=env) == Web3.to_checksum_address(OTHER)
+
+
+def test_parse_and_resolve_active_chain():
+    assert parse_chain_name("Sepolia") == SEPOLIA_CHAIN_ID
+    assert parse_chain_name("mainnet") == MAINNET_CHAIN_ID
+    assert resolve_active_chain_id("mainnet") == MAINNET_CHAIN_ID
+    assert resolve_active_chain_id(env={}) == SEPOLIA_CHAIN_ID
+    assert resolve_active_chain_id(env={"CHAIN": "mainnet"}) == MAINNET_CHAIN_ID
+    assert resolve_active_chain_id(env={"CHAIN_ID": "1"}) == MAINNET_CHAIN_ID
+    # --chain wins over CHAIN env
+    assert resolve_active_chain_id("sepolia", {"CHAIN": "mainnet"}) == SEPOLIA_CHAIN_ID
+    with pytest.raises(ValueError, match="Unsupported chain"):
+        parse_chain_name("base")
+
+
+def test_write_rpc_env_is_chain_scoped():
+    assert write_rpc_env_name(MAINNET_CHAIN_ID) == "MAINNET_RPC_URL"
+    assert write_rpc_env_name(SEPOLIA_CHAIN_ID) == "SEPOLIA_RPC_URL"
+    assert resolve_configured_write_rpc_url(
+        MAINNET_CHAIN_ID, {"MAINNET_RPC_URL": "http://mainnet"}
+    ) == "http://mainnet"
+    assert resolve_configured_write_rpc_url(
+        SEPOLIA_CHAIN_ID, {"SEPOLIA_RPC_URL": "http://sepolia"}
+    ) == "http://sepolia"
+    assert (
+        resolve_configured_write_rpc_url(
+            SEPOLIA_CHAIN_ID, {"RPC_URL": "http://ignored", "MAINNET_RPC_URL": "http://m"}
+        )
+        is None
+    )
+    assert (
+        resolve_configured_write_rpc_url(
+            MAINNET_CHAIN_ID, {"SEPOLIA_RPC_URL": "http://sepolia"}
+        )
+        is None
+    )

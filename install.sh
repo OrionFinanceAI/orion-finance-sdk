@@ -191,7 +191,7 @@ pick_default_rpc() {
     if rpc_works "$DEFAULT_RPC_2"; then log_ok "Using $DEFAULT_RPC_2"; echo "$DEFAULT_RPC_2"; return; fi
     if rpc_works "$DEFAULT_RPC_3"; then log_ok "Using $DEFAULT_RPC_3"; echo "$DEFAULT_RPC_3"; return; fi
     if rpc_works "$DEFAULT_RPC_4"; then log_ok "Using $DEFAULT_RPC_4"; echo "$DEFAULT_RPC_4"; return; fi
-    log_err "None of the default RPCs responded. You can set RPC_URL manually in .env later."
+    log_err "None of the default RPCs responded. You can set SEPOLIA_RPC_URL manually in .env later."
     echo ""
 }
 
@@ -212,7 +212,7 @@ post_install() {
     case "$answer" in
         [nN]*)
             echo "" >&2
-            log "Skipped. Create .env manually with: RPC_URL, MANAGER_PRIVATE_KEY, STRATEGIST_PRIVATE_KEY, LP_PRIVATE_KEY."
+            log "Skipped. Create .env manually with: SEPOLIA_RPC_URL (or MAINNET_RPC_URL), CHAIN, MANAGER_PRIVATE_KEY, STRATEGIST_PRIVATE_KEY, LP_PRIVATE_KEY."
             log "Run 'orion' when ready. Docs: https://sdk.orionfinance.ai/"
             echo "" >&2
             return
@@ -226,9 +226,9 @@ post_install() {
         return
     fi
 
-    # ─── RPC_URL ───────────────────────────────────────────────────────────
+    # ─── SEPOLIA_RPC_URL ───────────────────────────────────────────────────
     echo "" >&2
-    log "RPC_URL (Sepolia or mainnet):"
+    log "SEPOLIA_RPC_URL (default CHAIN=sepolia; set MAINNET_RPC_URL + CHAIN=mainnet for mainnet):"
     log "  [1] Use default (we try: 1rpc.io → 0xrpc.io → publicnode → stupidtech)"
     log "  [2] Paste your own URL"
     printf "  Choice [1/2]: " >&2
@@ -237,9 +237,9 @@ post_install() {
     rpc_url=""
     case "$rpc_choice" in
         2)
-            printf "  RPC_URL=(paste here): " >&2
+            printf "  SEPOLIA_RPC_URL=(paste here): " >&2
             read -r rpc_url < /dev/tty
-            [ -n "$rpc_url" ] || { log_err "RPC_URL cannot be empty."; rpc_url=""; }
+            [ -n "$rpc_url" ] || { log_err "SEPOLIA_RPC_URL cannot be empty."; rpc_url=""; }
             ;;
         *)
             rpc_url=$(pick_default_rpc)
@@ -266,10 +266,12 @@ post_install() {
         echo "# Orion Finance SDK - Environment Variables"
         echo "# Docs: https://sdk.orionfinance.ai/"
         echo ""
-        echo "# RPC URL for blockchain connection"
-        [ -n "$rpc_url" ] && echo "RPC_URL=$rpc_url" || echo "RPC_URL="
+        echo "# Chain-scoped RPC (no bare RPC_URL). Match CHAIN / CHAIN_ID."
+        [ -n "$rpc_url" ] && echo "SEPOLIA_RPC_URL=$rpc_url" || echo "SEPOLIA_RPC_URL="
+        echo "# MAINNET_RPC_URL="
         echo ""
-        echo "# Chain ID (default: 11155111 = Sepolia)"
+        echo "# Chain selection (default sepolia)"
+        echo "CHAIN=sepolia"
         echo "# CHAIN_ID=11155111"
         echo ""
         echo "# Private key for manager operations"

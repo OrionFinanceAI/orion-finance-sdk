@@ -1,5 +1,6 @@
 """Tests for console_ui presentation helpers."""
 
+import os
 from io import StringIO
 from unittest.mock import MagicMock, patch
 
@@ -117,18 +118,28 @@ def test_print_confirm_warning(capture_console):
 
 
 def test_print_session_bar_without_vault(capture_console):
-    env = {"CHAIN_ID": "11155111", "ORION_VAULT_ADDRESS": ""}
+    env = {"CHAIN_ID": "11155111", "ORION_VAULT_ADDRESS": "", "SEPOLIA_RPC_URL": ""}
     with patch.dict("os.environ", env, clear=False):
+        # Clear OrionConfig so readiness hints show.
+        os.environ.pop("SEPOLIA_ORION_CONFIG_ADDRESS", None)
         console_ui.print_session_bar()
     out = capture_console.getvalue()
     assert "Orion Console" in out
     assert "Sepolia" in out
     assert "not set" in out
+    assert "SEPOLIA_RPC_URL not set" in out
+    assert "SEPOLIA_ORION_CONFIG_ADDRESS not set" in out
 
 
 def test_print_session_bar_with_vault(capture_console):
     addr = "0x" + "ab" * 20
-    with patch.dict("os.environ", {"ORION_VAULT_ADDRESS": addr}):
+    env = {
+        "CHAIN_ID": "11155111",
+        "ORION_VAULT_ADDRESS": addr,
+        "SEPOLIA_RPC_URL": "http://localhost:8545",
+        "SEPOLIA_ORION_CONFIG_ADDRESS": "0xbDe3025d08681a02a1c6cf70375baBe2152DD06f",
+    }
+    with patch.dict("os.environ", env, clear=False):
         console_ui.print_session_bar()
     out = capture_console.getvalue()
     assert "Vault" in out

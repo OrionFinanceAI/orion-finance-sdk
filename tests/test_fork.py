@@ -44,7 +44,7 @@ def _alchemy_key() -> str:
 
 def _fork_upstream_url() -> str | None:
     """Sepolia RPC for ``anvil --fork-url`` (not a local Anvil endpoint)."""
-    rpc = (os.getenv("RPC_URL") or "").strip()
+    rpc = (os.getenv("SEPOLIA_RPC_URL") or "").strip()
     if rpc and "127.0.0.1" not in rpc and "localhost" not in rpc:
         return rpc
     key = _alchemy_key()
@@ -68,15 +68,15 @@ def _require_fork_config():
     if shutil.which("anvil") is None:
         pytest.skip("anvil not found; install Foundry (https://getfoundry.sh)")
     if not _HAS_FORK_UPSTREAM:
-        pytest.skip("Fork not configured: set ALCHEMY_API_KEY or RPC_URL in .env")
+        pytest.skip("Fork not configured: set ALCHEMY_API_KEY or SEPOLIA_RPC_URL in .env")
 
 
 @pytest.fixture(scope="module")
 def sepolia_fork():
-    """Shared Anvil Sepolia fork (module-scoped). Points ``RPC_URL`` at localhost."""
+    """Shared Anvil Sepolia fork (module-scoped). Points ``SEPOLIA_RPC_URL`` at localhost."""
     upstream = _fork_upstream_url()
     if not upstream:
-        pytest.skip("Fork not configured: set ALCHEMY_API_KEY or RPC_URL in .env")
+        pytest.skip("Fork not configured: set ALCHEMY_API_KEY or SEPOLIA_RPC_URL in .env")
 
     port = _free_port()
     local_rpc = f"http://127.0.0.1:{port}"
@@ -94,7 +94,7 @@ def sepolia_fork():
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
-    prev_rpc = os.environ.get("RPC_URL")
+    prev_rpc = os.environ.get("SEPOLIA_RPC_URL")
     try:
         w3 = Web3(Web3.HTTPProvider(local_rpc, request_kwargs={"timeout": 5}))
         deadline = time.monotonic() + _ANVIL_READY_TIMEOUT_S
@@ -107,7 +107,9 @@ def sepolia_fork():
         else:
             pytest.skip("anvil did not become ready")
 
-        os.environ["RPC_URL"] = local_rpc
+        os.environ["SEPOLIA_RPC_URL"] = local_rpc
+        os.environ.setdefault("CHAIN_ID", str(_SEPOLIA_CHAIN_ID))
+        os.environ.setdefault("CHAIN", "sepolia")
         os.environ.setdefault(
             "SEPOLIA_ORION_CONFIG_ADDRESS",
             "0xbDe3025d08681a02a1c6cf70375baBe2152DD06f",
@@ -120,9 +122,9 @@ def sepolia_fork():
         except subprocess.TimeoutExpired:
             proc.kill()
         if prev_rpc is None:
-            os.environ.pop("RPC_URL", None)
+            os.environ.pop("SEPOLIA_RPC_URL", None)
         else:
-            os.environ["RPC_URL"] = prev_rpc
+            os.environ["SEPOLIA_RPC_URL"] = prev_rpc
 
 
 def test_comprehensive_config_on_fork(sepolia_fork):

@@ -2,6 +2,7 @@
 
 import os
 import sys
+from pathlib import Path
 
 import questionary
 import typer
@@ -32,6 +33,11 @@ from .contracts import (
 from .erc20 import decimals as erc20_decimals
 from .erc20 import symbol as erc20_symbol
 from .order_intent_io import load_order_intent
+from .orion_config_env import (
+    CHAIN_ID_TO_NAME,
+    apply_chain_selection,
+    resolve_active_chain_id,
+)
 from .types import (
     ZERO_ADDRESS,
     FeeType,
@@ -44,6 +50,7 @@ from .utils import (
     ensure_env_file,
     format_transaction_logs,
     to_base_units,
+    upsert_dotenv_key,
     validate_order,
     validate_var,
 )
@@ -383,14 +390,17 @@ def ask_or_exit(question):
 _MENU_LABEL_WIDTH = 32
 
 
-def _q_select(message: str, choices):
+def _q_select(message: str, choices, default=None):
     """Questionary select with shared Orion style."""
-    return questionary.select(
-        message,
-        choices=choices,
-        instruction="[ ↑↓ to scroll | Enter to select ]",
-        style=questionary_style(),
-    )
+    kwargs: dict = {
+        "message": message,
+        "choices": choices,
+        "instruction": "[ ↑↓ to scroll | Enter to select ]",
+        "style": questionary_style(),
+    }
+    if default is not None:
+        kwargs["default"] = default
+    return questionary.select(**kwargs)
 
 
 def _q_text(message: str, **kwargs):
@@ -496,12 +506,53 @@ def validate_symbol(val: str) -> bool | str:
     return True
 
 
-def interactive_menu():
-    """Launch the interactive TUI menu."""
+def _lock_session_chain(chain_from_cli: str | None = None) -> str:
+    """Pick and lock the session network. Returns ``sepolia`` or ``mainnet``.
+
+    ``--chain`` skips the prompt. Otherwise the console asks once (default from
+    ``CHAIN`` / ``CHAIN_ID`` / sepolia) and may persist ``CHAIN`` + ``CHAIN_ID`` to ``.env``.
+    """
+    if chain_from_cli is not None and str(chain_from_cli).strip():
+        chain_id = apply_chain_selection(chain_from_cli)
+        return CHAIN_ID_TO_NAME.get(chain_id, "sepolia")
+
+    default_id = resolve_active_chain_id()
+    default_name = CHAIN_ID_TO_NAME.get(default_id, "sepolia")
+    selected = ask_or_exit(
+        _q_select(
+            "Network for this session:",
+            ["sepolia", "mainnet"],
+            default=default_name,
+        )
+    )
+    chain_id = apply_chain_selection(selected)
+    name = CHAIN_ID_TO_NAME.get(chain_id, "sepolia")
+
+    persist = ask_or_exit(
+        _q_confirm(f"Save CHAIN={name} to .env for next time?", default=False)
+    )
+    if persist:
+        env_path = Path.cwd() / ".env"
+        upsert_dotenv_key(env_path, "CHAIN", name)
+        upsert_dotenv_key(env_path, "CHAIN_ID", str(chain_id))
+        print_info(f"Wrote CHAIN={name} to {env_path}")
+
+    return name
+
+
+def interactive_menu(chain_from_cli: str | None = None):
+    """Launch the interactive TUI menu.
+
+    Chain is locked for the session: ``--chain`` skips the prompt; otherwise the
+    user picks once at start. ``load_dotenv`` cannot switch networks mid-session.
+    Restart the console to change chain.
+    """
+    locked_chain = _lock_session_chain(chain_from_cli)
     print_welcome()
     while True:
-        # Force reload environment variables to pick up changes (e.g. newly deployed vault address)
+        # Reload .env for vault address / keys, then re-apply the locked network.
         load_dotenv(override=True)
+        apply_chain_selection(locked_chain)
         print_session_bar()
         choice = None
         try:
@@ -719,11 +770,20 @@ def interactive_menu():
 
 
 @app.callback(invoke_without_command=True)
-def main(ctx: typer.Context):
+def main(
+    ctx: typer.Context,
+    chain: str | None = typer.Option(
+        None,
+        "--chain",
+        help="Network: sepolia | mainnet (skips console prompt; or set CHAIN / CHAIN_ID)",
+    ),
+):
     """Orion Finance CLI."""
     ensure_env_file()
     if ctx.invoked_subcommand is None:
-        interactive_menu()
+        interactive_menu(chain_from_cli=chain)
+    else:
+        apply_chain_selection(chain)
 
 
 def entry_point():

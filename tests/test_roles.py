@@ -24,7 +24,7 @@ from orion_finance_sdk_py.events import parse_lp_events_from_receipt
 @pytest.fixture
 def mock_env():
     env_vars = {
-        "RPC_URL": "http://localhost:8545",
+        "SEPOLIA_RPC_URL": "http://localhost:8545",
         "CHAIN_ID": "11155111",
         "MANAGER_PRIVATE_KEY": "0xPrivate",
         "STRATEGIST_PRIVATE_KEY": "0xPrivate",
@@ -227,7 +227,7 @@ def test_vault_redeem_requires_decommissioned(MockConfig, mock_exec):
     with patch.dict(
         os.environ,
         {
-            "RPC_URL": "http://localhost:8545",
+            "SEPOLIA_RPC_URL": "http://localhost:8545",
             "ORION_VAULT_ADDRESS": "0xVault",
             "LP_PRIVATE_KEY": "0xPrivate",
         },

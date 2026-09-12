@@ -136,6 +136,8 @@ Create a `.env` in your project directory. Keep it private and never commit it.
 
 | Task | Variables |
 | ---- | --------- |
+| Network | Interactive: pick Sepolia/Mainnet once at start (or `orion --chain …` to skip). Scriptable: `orion --chain mainnet <cmd>`. Env: `CHAIN` / `CHAIN_ID`. Restart console to change chain. Use `SEPOLIA_RPC_URL` or `MAINNET_RPC_URL` (no bare `RPC_URL`). |
+| OrionConfig | `SEPOLIA_ORION_CONFIG_ADDRESS` or `MAINNET_ORION_CONFIG_ADDRESS` for the active chain (required; no defaults) |
 | Deploy / manage a vault | `MANAGER_PRIVATE_KEY`, `ORION_VAULT_ADDRESS` (after deploy) |
 | Submit intents | `ORION_VAULT_ADDRESS`, `STRATEGIST_PRIVATE_KEY` |
 | LP deposit / redeem | `ORION_VAULT_ADDRESS`, `LP_PRIVATE_KEY` |
@@ -153,6 +155,7 @@ The SDK ships a CLI named `orion`. With **no subcommand** it opens an interactiv
 ```bash
 orion          # interactive console
 orion --help   # list scriptable commands
+orion --chain mainnet deploy-vault --help
 ```
 
 ### Scriptable commands
@@ -397,7 +400,7 @@ series = registry.price_history(start=start, end=end)
 # )
 ```
 
-For long series, set a dedicated `RPC_URL` - public endpoints are rate-limited.
+For long series, set a dedicated `SEPOLIA_RPC_URL` / `MAINNET_RPC_URL` - public endpoints are rate-limited.
 
 A longer research walkthrough (excess returns, covariance, a sample portfolio) is in [`notebooks/investment_universe_research.ipynb`](https://github.com/OrionFinanceAI/orion-finance-sdk-py/blob/main/notebooks/investment_universe_research.ipynb). Prefer {ref}`return-stats` for ranking and measures so notebooks do not reimplement SASR.
 

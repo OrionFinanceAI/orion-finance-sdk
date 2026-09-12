@@ -96,7 +96,7 @@ def test_vault_abi_includes_272_methods():
 
 
 def test_access_control_interface_abis():
-    """Interface ABIs from abis-v2.7.2 include the ACL view methods."""
+    """Interface ABIs from abis-v2.7.6 include the ACL view methods."""
     deposit = {
         item["name"]
         for item in load_contract_abi("IOrionDepositAccessControl")

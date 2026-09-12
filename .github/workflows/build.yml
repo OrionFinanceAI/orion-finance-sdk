@@ -29,7 +29,7 @@ jobs:
         uses: foundry-rs/foundry-toolchain@908c540300062bd5a7e473851cdb4282204cee09 # v1.9.1
 
       - name: Cache Python packages
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .venv
           key: ${{ runner.os }}-python-${{ hashFiles('**/requirements.txt', '**/pyproject.toml') }}
@@ -60,7 +60,7 @@ jobs:
 
       - name: Run tests
         env:
-          # Fork tests skip unless ALCHEMY_API_KEY or RPC_URL is set
+          # Fork tests skip unless ALCHEMY_API_KEY or SEPOLIA_RPC_URL is set
           ALCHEMY_API_KEY: ${{ secrets.WEB3_ALCHEMY_API_KEY }}
           WEB3_ALCHEMY_API_KEY: ${{ secrets.WEB3_ALCHEMY_API_KEY }}
           WEB3_ETHEREUM_SEPOLIA_ALCHEMY_API_KEY: ${{ secrets.WEB3_ALCHEMY_API_KEY }}
@@ -68,7 +68,7 @@ jobs:
           make test
 
       - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@0fb7174895f61a3b6b78fc075e0cd60383518dac # v5.5.5
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: OrionFinanceAI/orion-finance-sdk-py

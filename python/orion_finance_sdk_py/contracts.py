@@ -13,7 +13,13 @@ from web3.exceptions import BadFunctionCallOutput
 from web3.types import HexStr, TxReceipt
 
 from .console_ui import progress_step
-from .orion_config_env import resolve_orion_config_address
+from .orion_config_env import (
+    MAINNET_CHAIN_ID,
+    resolve_active_chain_id,
+    resolve_configured_write_rpc_url,
+    resolve_orion_config_address,
+    write_rpc_env_name,
+)
 from .rpc import (
     block_at_timestamp as lookup_block_at_timestamp,
 )
@@ -21,6 +27,7 @@ from .rpc import (
     call_with_rpc_retry,
     get_block,
     make_http_provider,
+    pick_default_mainnet_rpc,
     pick_default_rpc,
 )
 from .types import ZERO_ADDRESS, VaultType
@@ -113,59 +120,56 @@ class OrionSmartContract:
 
     def __init__(self, contract_name: str, contract_address: str):
         """Initialize a smart contract."""
-        rpc_url = os.getenv("RPC_URL")
+        chain_id = resolve_active_chain_id()
+        rpc_url = resolve_configured_write_rpc_url(chain_id)
         if not rpc_url:
             # Try loading from current directory explicitly
             load_dotenv(os.getcwd() + "/.env")
-            rpc_url = os.getenv("RPC_URL")
+            chain_id = resolve_active_chain_id()
+            rpc_url = resolve_configured_write_rpc_url(chain_id)
 
+        rpc_env_name = write_rpc_env_name(chain_id)
         if rpc_url:
             rpc_url = validate_var(
                 rpc_url,
                 error_message=(
-                    "RPC_URL environment variable is missing or invalid. "
-                    "Please set RPC_URL in your .env file or as an environment variable. "
+                    f"{rpc_env_name} environment variable is missing or invalid. "
+                    f"Please set {rpc_env_name} in your .env file or as an environment variable. "
                 ),
             )
-
-            self.w3 = Web3(make_http_provider(rpc_url))
-            self.chain_id = self.w3.eth.chain_id
-
-            env_chain_id = os.getenv("CHAIN_ID")
-            if env_chain_id:
-                try:
-                    env_chain_id_int = int(env_chain_id)
-                    if env_chain_id_int != self.chain_id:
-                        print(
-                            f"⚠️ Warning: CHAIN_ID in env ({env_chain_id}) does not match RPC chain ID ({self.chain_id})"
-                        )
-                except ValueError:
-                    print(f"⚠️ Warning: Invalid CHAIN_ID in env: {env_chain_id}")
-
-            self.contract_name = contract_name
-            self.contract_address = checksum_address(contract_address)
-            self.contract = self.w3.eth.contract(
-                address=self.contract_address,
-                abi=load_contract_abi(self.contract_name),
+        else:
+            default_rpc = (
+                pick_default_mainnet_rpc()
+                if chain_id == MAINNET_CHAIN_ID
+                else pick_default_rpc()
             )
-            return
+            if not default_rpc:
+                raise ValueError(
+                    f"{rpc_env_name} environment variable is missing or invalid, and no default "
+                    f"public RPC responded. Please set {rpc_env_name} in your .env file or as an "
+                    "environment variable."
+                )
+            rpc_url = default_rpc
 
-        default_rpc = pick_default_rpc()
-        if default_rpc:
-            self.w3 = Web3(make_http_provider(default_rpc))
-            self.chain_id = self.w3.eth.chain_id
-            self.contract_name = contract_name
-            self.contract_address = checksum_address(contract_address)
-            self.contract = self.w3.eth.contract(
-                address=self.contract_address,
-                abi=load_contract_abi(self.contract_name),
-            )
-            return
+        self.w3 = Web3(make_http_provider(rpc_url))
+        self.chain_id = self.w3.eth.chain_id
 
-        raise ValueError(
-            "RPC_URL environment variable is missing or invalid, and no default "
-            "public RPC responded. Please set RPC_URL in your .env file or as an "
-            "environment variable."
+        env_chain_id = os.getenv("CHAIN_ID")
+        if env_chain_id:
+            try:
+                env_chain_id_int = int(env_chain_id)
+                if env_chain_id_int != self.chain_id:
+                    print(
+                        f"⚠️ Warning: CHAIN_ID in env ({env_chain_id}) does not match RPC chain ID ({self.chain_id})"
+                    )
+            except ValueError:
+                print(f"⚠️ Warning: Invalid CHAIN_ID in env: {env_chain_id}")
+
+        self.contract_name = contract_name
+        self.contract_address = checksum_address(contract_address)
+        self.contract = self.w3.eth.contract(
+            address=self.contract_address,
+            abi=load_contract_abi(self.contract_name),
         )
 
     def block_at_timestamp(
@@ -179,7 +183,8 @@ class OrionSmartContract:
 
         Uses binary search over ``eth_getBlockByNumber``. Optional ``lo`` / ``hi``
         bound the search for sequential sampling. For long historical series prefer
-        a dedicated ``RPC_URL`` (public endpoints are rate-limited).
+        a dedicated ``SEPOLIA_RPC_URL`` / ``MAINNET_RPC_URL`` (public endpoints are
+        rate-limited).
         """
         return lookup_block_at_timestamp(self.w3, timestamp, lo=lo, hi=hi)
 
@@ -694,8 +699,8 @@ class PriceAdapterRegistry(OrionSmartContract):
         No vault is required - prices come from the price adapter registry for
         the investment universe (or an optional subset). The SDK returns plain
         dicts; wrap in pandas in your notebook for return / distribution
-        analysis. Public RPCs are rate-limited - use a dedicated ``RPC_URL``
-        for long series.
+        analysis. Public RPCs are rate-limited - use a dedicated ``SEPOLIA_RPC_URL`` /
+        ``MAINNET_RPC_URL`` for long series.
 
         Args:
             start: Start as ``datetime``, unix timestamp, or block number
@@ -1579,7 +1584,8 @@ class OrionVault(OrionSmartContract):
         """Sample vault share price over a time range (onchain ``eth_call`` at each point).
 
         The SDK returns plain dicts; wrap in pandas in your notebook for correlation
-        analysis. Public RPCs are rate-limited - use a dedicated ``RPC_URL`` for
+        analysis. Public RPCs are rate-limited - use a dedicated ``SEPOLIA_RPC_URL`` /
+        ``MAINNET_RPC_URL`` for
         long series.
 
         Args:

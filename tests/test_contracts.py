@@ -101,7 +101,7 @@ def mock_load_abi():
 def mock_env():
     """Mock environment variables."""
     env_vars = {
-        "RPC_URL": "http://localhost:8545",
+        "SEPOLIA_RPC_URL": "http://localhost:8545",
         "CHAIN_ID": "11155111",
         "STRATEGIST_ADDRESS": "0xStrategist",
         "CURATOR_ADDRESS": "0xCurator",
@@ -219,13 +219,16 @@ class TestOrionSmartContract:
 
     @pytest.mark.usefixtures("mock_w3", "mock_load_abi")
     def test_init_load_dotenv_restores_rpc_url(self):
-        """When RPC_URL is unset, load_dotenv can populate it (lines 76–79)."""
+        """When SEPOLIA_RPC_URL is unset, load_dotenv can populate it."""
         saved = dict(os.environ)
         try:
+            os.environ.pop("SEPOLIA_RPC_URL", None)
             os.environ.pop("RPC_URL", None)
+            os.environ.pop("CHAIN", None)
+            os.environ["CHAIN_ID"] = "11155111"
 
             def _inject_rpc(*_a, **_k):
-                os.environ["RPC_URL"] = "http://localhost:8545"
+                os.environ["SEPOLIA_RPC_URL"] = "http://localhost:8545"
 
             with patch(
                 "orion_finance_sdk_py.contracts.load_dotenv", side_effect=_inject_rpc
@@ -238,17 +241,21 @@ class TestOrionSmartContract:
 
     @pytest.mark.usefixtures("mock_load_abi")
     def test_init_no_rpc_raises_when_no_default(self):
-        """No RPC_URL and public RPC cascade fails: ValueError."""
+        """No chain-scoped RPC and public RPC cascade fails: ValueError."""
         saved_env = dict(os.environ)
         try:
+            os.environ.pop("SEPOLIA_RPC_URL", None)
+            os.environ.pop("MAINNET_RPC_URL", None)
             os.environ.pop("RPC_URL", None)
+            os.environ.pop("CHAIN", None)
+            os.environ["CHAIN_ID"] = "11155111"
             with (
                 patch("orion_finance_sdk_py.contracts.load_dotenv"),
                 patch(
                     "orion_finance_sdk_py.contracts.pick_default_rpc",
                     return_value=None,
                 ),
-                pytest.raises(ValueError, match="RPC_URL environment variable"),
+                pytest.raises(ValueError, match="SEPOLIA_RPC_URL environment variable"),
             ):
                 OrionSmartContract("TestContract", "0xAddress")
         finally:
@@ -257,10 +264,67 @@ class TestOrionSmartContract:
 
     @pytest.mark.usefixtures("mock_w3", "mock_load_abi")
     def test_init_uses_default_public_rpc_when_no_rpc_url(self):
-        """When RPC_URL is unset, use pick_default_rpc()."""
+        """When SEPOLIA_RPC_URL is unset, use pick_default_rpc()."""
         saved_env = dict(os.environ)
         try:
+            os.environ.pop("SEPOLIA_RPC_URL", None)
+            os.environ.pop("MAINNET_RPC_URL", None)
             os.environ.pop("RPC_URL", None)
+            os.environ.pop("CHAIN", None)
+            os.environ["CHAIN_ID"] = "11155111"
+            with (
+                patch("orion_finance_sdk_py.contracts.load_dotenv"),
+                patch(
+                    "orion_finance_sdk_py.contracts.pick_default_rpc",
+                    return_value="https://1rpc.io/sepolia",
+                ) as mock_pick,
+            ):
+                c = OrionSmartContract("TestContract", "0xAddress")
+            mock_pick.assert_called_once()
+            assert c.w3 is not None
+        finally:
+            os.environ.clear()
+            os.environ.update(saved_env)
+
+    @pytest.mark.usefixtures("mock_w3", "mock_load_abi")
+    def test_init_mainnet_uses_mainnet_rpc_and_default(self):
+        """CHAIN=mainnet uses MAINNET_RPC_URL / pick_default_mainnet_rpc, not Sepolia."""
+        saved_env = dict(os.environ)
+        try:
+            os.environ.pop("SEPOLIA_RPC_URL", None)
+            os.environ.pop("MAINNET_RPC_URL", None)
+            os.environ.pop("RPC_URL", None)
+            os.environ["CHAIN"] = "mainnet"
+            os.environ["CHAIN_ID"] = "1"
+            with (
+                patch("orion_finance_sdk_py.contracts.load_dotenv"),
+                patch(
+                    "orion_finance_sdk_py.contracts.pick_default_rpc",
+                    return_value="https://sepolia.example",
+                ) as mock_sepolia,
+                patch(
+                    "orion_finance_sdk_py.contracts.pick_default_mainnet_rpc",
+                    return_value="https://mainnet.example",
+                ) as mock_mainnet,
+            ):
+                c = OrionSmartContract("TestContract", "0xAddress")
+            mock_mainnet.assert_called_once()
+            mock_sepolia.assert_not_called()
+            assert c.w3 is not None
+        finally:
+            os.environ.clear()
+            os.environ.update(saved_env)
+
+    @pytest.mark.usefixtures("mock_w3", "mock_load_abi")
+    def test_init_ignores_bare_rpc_url(self):
+        """Bare RPC_URL is ignored; chain-scoped var (or public default) is required."""
+        saved_env = dict(os.environ)
+        try:
+            os.environ.pop("SEPOLIA_RPC_URL", None)
+            os.environ.pop("MAINNET_RPC_URL", None)
+            os.environ["RPC_URL"] = "http://should-be-ignored"
+            os.environ.pop("CHAIN", None)
+            os.environ["CHAIN_ID"] = "11155111"
             with (
                 patch("orion_finance_sdk_py.contracts.load_dotenv"),
                 patch(
@@ -394,12 +458,13 @@ class TestOrionConfig:
 
     @pytest.mark.usefixtures("mock_w3", "mock_load_abi")
     def test_init_mainnet_requires_mainnet_env(self):
-        """CHAIN_ID=1 reads MAINNET_* only; SEPOLIA_* and ORION_CONFIG_ADDRESS are ignored."""
+        """CHAIN=mainnet reads MAINNET_* only; SEPOLIA_* and ORION_CONFIG_ADDRESS are ignored."""
         with patch.dict(
             os.environ,
             {
+                "CHAIN": "mainnet",
                 "CHAIN_ID": "1",
-                "RPC_URL": "http://localhost",
+                "MAINNET_RPC_URL": "http://localhost",
                 "SEPOLIA_ORION_CONFIG_ADDRESS": "0xbDe3025d08681a02a1c6cf70375baBe2152DD06f",
                 "ORION_CONFIG_ADDRESS": "0xbDe3025d08681a02a1c6cf70375baBe2152DD06f",
                 "MAINNET_ORION_CONFIG_ADDRESS": "",
@@ -413,7 +478,14 @@ class TestOrionConfig:
     def test_init_chain_mismatch(self):
         """Test init with chain ID mismatch warning."""
         # mock_w3 provides chain_id=11155111
-        with patch.dict(os.environ, {"CHAIN_ID": "1", "RPC_URL": "http://localhost"}):
+        with patch.dict(
+            os.environ,
+            {
+                "CHAIN_ID": "1",
+                "CHAIN": "mainnet",
+                "MAINNET_RPC_URL": "http://localhost",
+            },
+        ):
             with patch("builtins.print") as mock_print:
                 # We instantiate a base contract which does the check
                 OrionSmartContract("Test", "0xAddress")
@@ -423,15 +495,18 @@ class TestOrionConfig:
 
     @pytest.mark.usefixtures("mock_w3", "mock_load_abi")
     def test_init_invalid_chain_id_env(self):
-        """Test init with non-integer CHAIN_ID in env prints warning."""
+        """Invalid CHAIN_ID fails during chain resolution before RPC connect."""
         with patch.dict(
-            os.environ, {"CHAIN_ID": "invalid", "RPC_URL": "http://localhost"}
+            os.environ,
+            {
+                "CHAIN_ID": "invalid",
+                "SEPOLIA_RPC_URL": "http://localhost",
+            },
+            clear=False,
         ):
-            with patch("builtins.print") as mock_print:
+            os.environ.pop("CHAIN", None)
+            with pytest.raises(ValueError, match="Invalid CHAIN_ID"):
                 OrionSmartContract("Test", "0xAddress")
-                mock_print.assert_called_with(
-                    "⚠️ Warning: Invalid CHAIN_ID in env: invalid"
-                )
 
     @pytest.mark.usefixtures("mock_w3", "mock_load_abi", "mock_env")
     def test_decode_logs_exception(self):

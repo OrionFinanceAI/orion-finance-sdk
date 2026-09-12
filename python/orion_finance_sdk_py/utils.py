@@ -31,11 +31,13 @@ def ensure_env_file(env_file_path: Path = Path.cwd() / ".env"):
         # Create .env file with template
         env_template = """# Orion Finance SDK Environment Variables
 
-# RPC URL for testnet connection
-RPC_URL=
-
-# Optional RPC for execution cost estimates (public mainnet RPCs if unset)
+# Chain-scoped RPC only (no bare RPC_URL). Must match --chain / CHAIN / CHAIN_ID.
+SEPOLIA_RPC_URL=
 # MAINNET_RPC_URL=
+
+# Chain selection (default sepolia). Prefer CHAIN=sepolia|mainnet; CHAIN_ID also works.
+# CHAIN=sepolia
+# CHAIN_ID=11155111
 
 # Private key for manager operations
 MANAGER_PRIVATE_KEY=
@@ -61,6 +63,28 @@ LP_PRIVATE_KEY=
             print_env_created(env_file_path)
         except Exception:
             pass
+
+
+def upsert_dotenv_key(env_file_path: Path, key: str, value: str) -> None:
+    """Set ``key=value`` in a dotenv file, replacing an existing (or commented) assignment."""
+    new_line = f"{key}={value}"
+    if not env_file_path.exists():
+        env_file_path.write_text(new_line + "\n")
+        return
+    raw_lines = env_file_path.read_text().splitlines()
+    out: list[str] = []
+    found = False
+    for raw in raw_lines:
+        stripped = raw.strip()
+        if stripped.startswith(f"{key}=") or stripped.startswith(f"#{key}="):
+            if not found:
+                out.append(new_line)
+                found = True
+            continue
+        out.append(raw)
+    if not found:
+        out.append(new_line)
+    env_file_path.write_text("\n".join(out) + "\n")
 
 
 def to_base_units(amount: str | int | float | Decimal, decimals: int) -> int:

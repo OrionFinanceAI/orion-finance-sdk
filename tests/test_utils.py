@@ -32,6 +32,8 @@ def test_ensure_env_file(tmp_path):
     assert "LP_PRIVATE_KEY=" in content
     assert "SEPOLIA_ORION_CONFIG_ADDRESS=" in content
     assert "MAINNET_ORION_CONFIG_ADDRESS=" in content
+    assert "CHAIN=sepolia" in content
+    assert "CHAIN_ID=11155111" in content
 
 
 def test_ensure_env_file_exists(tmp_path):
@@ -42,6 +44,21 @@ def test_ensure_env_file_exists(tmp_path):
     ensure_env_file(env_file)
 
     assert env_file.read_text() == "EXISTING_CONTENT=1"
+
+
+def test_upsert_dotenv_key_creates_and_replaces(tmp_path):
+    from orion_finance_sdk_py.utils import upsert_dotenv_key
+
+    env_file = tmp_path / ".env"
+    upsert_dotenv_key(env_file, "CHAIN", "sepolia")
+    assert "CHAIN=sepolia" in env_file.read_text()
+
+    env_file.write_text("#CHAIN=sepolia\nSEPOLIA_RPC_URL=http://x\n")
+    upsert_dotenv_key(env_file, "CHAIN", "mainnet")
+    text = env_file.read_text()
+    assert "CHAIN=mainnet" in text
+    assert "#CHAIN=sepolia" not in text
+    assert "SEPOLIA_RPC_URL=http://x" in text
 
 
 def test_validate_var():
